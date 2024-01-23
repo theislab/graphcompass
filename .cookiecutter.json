@@ -1,0 +1,15 @@
+{
+  "_output_dir": "/Users/mayar.ali/Documents/phd/projects/hackthon/git",
+  "_repo_dir": "/Users/mayar.ali/.cookiecutters/cookiecutter-hypermodern-python",
+  "_template": "gh:cjolowicz/cookiecutter-hypermodern-python",
+  "author": "Mayar Ali and Merel Kuijs",
+  "copyright_year": "2024",
+  "development_status": "Development Status :: 1 - Planning",
+  "email": "mayar.ali@helmholtz-munich.de, merelsentina.kuijs@helmholtz-munich.de",
+  "friendly_name": "Graph-COMPASS",
+  "github_user": "theislab",
+  "license": "MIT",
+  "package_name": "graphcompass",
+  "project_name": "graphcompass",
+  "version": "0.0.0"
+}
