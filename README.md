@@ -1,4 +1,4 @@
-# Graph-COMPASS
+# GraphCompass
 
 [![PyPI](https://img.shields.io/pypi/v/graphcompass.svg)][pypi_]
 [![Status](https://img.shields.io/pypi/status/graphcompass.svg)][status]
@@ -31,7 +31,7 @@
 
 ## Installation
 
-You can install _Graph-COMPASS_ via [pip] from [PyPI]:
+You can install _GraphCompass_ via [pip] from [PyPI]:
 
 ```console
 $ pip install graphcompass
