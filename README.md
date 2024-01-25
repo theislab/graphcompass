@@ -6,8 +6,18 @@ It is developed on top on [`Squidpy`](https://github.com/scverse/squidpy/) and [
 ## Features
 GraphCompass provides differential analysis methods to study spatial organization across conditions at three levels of abstraction: 
 1. Cell-type-specific subgraphs,
+
+   i. portrait method,
+
+   ii. diffusion method.
 3. Cellular Neighborhood
-4. Entire ntire graphs.
+
+   i. GLM for neighborhood enrichment analysis.
+4. Entire ntire graphs
+
+   i. Wasserstein WL kernel,
+
+   ii. filtration curves.
 
 Tutorials for the different methods can be found in the `notebooks\` folder. 
 
