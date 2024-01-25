@@ -41,7 +41,6 @@ fonttools==4.37.2
 freetype-py==2.4.0
 frozenlist==1.3.1
 fsspec==2022.8.2
--e git+https://github.com/theislab/graphcompass.git@5130bfa13b13bd326b2eb96c3c220a7f3ca14fa3#egg=graphcompass
 h5py==3.7.0
 HeapDict==1.0.1
 hsluv==5.0.4
