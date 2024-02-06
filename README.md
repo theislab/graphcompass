@@ -1,55 +1,54 @@
-# Graph-COMPASS
+# GraphCompass
+GraphCompass (**Graph** **Comp**arison Tools for Differential **A**nalyses in **S**patial **S**ystems) is a Python-based framework that brings together a robust suite of graph analysis and visualization methods, specifically tailored for the differential analysis of cell spatial organization using spatial omics data.
 
-[![PyPI](https://img.shields.io/pypi/v/graphcompass.svg)][pypi_]
-[![Status](https://img.shields.io/pypi/status/graphcompass.svg)][status]
-[![Python Version](https://img.shields.io/pypi/pyversions/graphcompass)][python version]
-[![License](https://img.shields.io/pypi/l/graphcompass)][license]
-
-[![Read the documentation at https://graphcompass.readthedocs.io/](https://img.shields.io/readthedocs/graphcompass/latest.svg?label=Read%20the%20Docs)][read the docs]
-[![Tests](https://github.com/theislab/graphcompass/workflows/Tests/badge.svg)][tests]
-[![Codecov](https://codecov.io/gh/theislab/graphcompass/branch/main/graph/badge.svg)][codecov]
-
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)][pre-commit]
-[![Black](https://img.shields.io/badge/code%20style-black-000000.svg)][black]
-
-[pypi_]: https://pypi.org/project/graphcompass/
-[status]: https://pypi.org/project/graphcompass/
-[python version]: https://pypi.org/project/graphcompass
-[read the docs]: https://graphcompass.readthedocs.io/
-[tests]: https://github.com/theislab/graphcompass/actions?workflow=Tests
-[codecov]: https://app.codecov.io/gh/theislab/graphcompass
-[pre-commit]: https://github.com/pre-commit/pre-commit
-[black]: https://github.com/psf/black
+It is developed on top on [`Squidpy`](https://github.com/scverse/squidpy/) and [`AnnData`](https://github.com/scverse/anndata).
 
 ## Features
+GraphCompass provides differential analysis methods to study spatial organization across conditions at three levels of abstraction: 
+1. Cell-type-specific subgraphs:
 
-- TODO
+   i. Portrait method,
+
+   ii. Diffusion method.
+3. Cellular neighborhoods:
+
+   i. GLMs for neighborhood enrichment analysis.
+4. Entire graphs:
+
+   i. Wasserstein WL kernel,
+
+   ii. Filtration curves.
+
+Tutorials for the different methods can be found in the `notebooks` folder. 
+
 
 ## Requirements
-
-- TODO
+You will find all the necessary dependencies in the `requirements.txt` file:
+```console
+$ pip install -r requirements.txt
+```
+**[COMING SOON]** All dependencies will be moved to `pyproject.toml`
 
 ## Installation
-
-You can install _Graph-COMPASS_ via [pip] from [PyPI]:
-
+You can install _GraphCompass_ by cloning the repository and running:
 ```console
-$ pip install graphcompass
+$ pip install -e .
 ```
+
+**[COMING SOON]** You can install _GraphCompass_ via [pip] from [PyPI].
 
 ## Usage
 
-Please see the [Command-line Reference] for details.
 
 ## Contributing
 
-Contributions are very welcome.
+**[COMING SOON]** Contributions are very welcome.
 To learn more, see the [Contributor Guide].
 
 ## License
 
 Distributed under the terms of the [MIT license][license],
-_Graph-COMPASS_ is free and open source software.
+_GraphCompass_ is free and open source software.
 
 ## Issues
 
@@ -69,5 +68,4 @@ This project was generated from [@cjolowicz]'s [Hypermodern Python Cookiecutter]
 <!-- github-only -->
 
 [license]: https://github.com/theislab/graphcompass/blob/main/LICENSE
-[contributor guide]: https://github.com/theislab/graphcompass/blob/main/CONTRIBUTING.md
-[command-line reference]: https://graphcompass.readthedocs.io/en/latest/usage.html
+[COMING SOON] [contributor guide]: https://github.com/theislab/graphcompass/blob/main/CONTRIBUTING.md
