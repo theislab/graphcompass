@@ -6,9 +6,10 @@ requires = ["hatchling", "hatch-vcs"]
 
 [project]
 name = "graphcompass"
-dynamic = ["version"]
+#dynamic = ["version"]
+version = "0.1.1"
 description = "Spatial metrics for differential analyses of cell organization across conditions"
-readme = "README.md"
+readme = "README.md" #change to README_pypi.md for PyPI
 requires-python = ">=3.9"
 license = {file = "LICENSE"}
 classifiers = [
