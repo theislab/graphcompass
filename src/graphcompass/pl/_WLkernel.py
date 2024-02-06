@@ -24,7 +24,7 @@ def compare_conditions(
     dpi: Union[int, None] = 300,
     color: Union[str, list] = "grey",
     palette: str = "Set2",
-    add_sign: bool = True,
+    add_sign: bool = False,
     save: Union[str, Path, None] = None,
     **kwargs: Any,
 ) -> Union[Axes, Sequence[Axes], None]:

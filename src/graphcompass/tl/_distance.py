@@ -241,7 +241,7 @@ def _calculate_graph_density(graph: Union[nx.Graph, scipy.sparse._csr.csr_matrix
     Calculate a density metric for a graph.
     """
     if isinstance(graph, scipy.sparse._csr.csr_matrix):
-        graph = nx.from_scipy_sparse_matrix(graph)
+        graph = nx.from_scipy_sparse_array(graph)
     
     num_nodes = graph.number_of_nodes()
     num_edges = graph.number_of_edges()
