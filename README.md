@@ -26,12 +26,18 @@ Tutorials for the different methods can be found in the `notebooks` folder.
 You will find all the necessary dependencies in  `pyproject.toml` and `requirements.txt` files.
 
 ## Installation
-You can install _GraphCompass_ by cloning the repository and running:
+You can install _GraphCompass_ via [pip] from [PyPI](https://pypi.org/project/graphcompass/).
+ ```console
+$ pip install graphcompass
+```
+
+or
+you can install _GraphCompass_  by cloning the repository and running:
 ```console
 $ pip install -e .
 ```
 
-**[COMING SOON]** You can install _GraphCompass_ via [pip] from [PyPI].
+ 
 
 ## Usage
 
