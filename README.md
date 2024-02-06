@@ -23,11 +23,7 @@ Tutorials for the different methods can be found in the `notebooks` folder.
 
 
 ## Requirements
-You will find all the necessary dependencies in the `requirements.txt` file:
-```console
-$ pip install -r requirements.txt
-```
-**[COMING SOON]** All dependencies will be moved to `pyproject.toml`
+You will find all the necessary dependencies in  `pyproject.toml` and `requirements.txt` files.
 
 ## Installation
 You can install _GraphCompass_ by cloning the repository and running:
