@@ -10,7 +10,7 @@ name = "graphcompass"
 version = "0.1.1"
 description = "Spatial metrics for differential analyses of cell organization across conditions"
 readme = "README.md" #change to README_pypi.md for PyPI
-requires-python = ">=3.9"
+requires-python = ">=3.9, <3.12"
 license = {file = "LICENSE"}
 classifiers = [
     "Development Status :: 4 - Beta",
