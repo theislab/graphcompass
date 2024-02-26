@@ -198,10 +198,6 @@ def _calculate_graph_distance(
     if not isinstance(adata, AnnData):
         raise TypeError("Parameter 'adata' must be an AnnData object.")
     
-    # Only calculating upper triangle
-    if sample_a >= sample_b:
-        return (sample_a, sample_b, cell_type, np.nan)
-    
     adata_sample_a = adata[adata.obs[library_key] == sample_a]
     adata_sample_b = adata[adata.obs[library_key] == sample_b]
 
