@@ -244,9 +244,9 @@ def compare_conditions(
                     palette=palette,
                     ax=axes[i, 0],
                 )
+                axes[i, 0].set_xlim(0, 1)
                 axes[i, 0].set_xticks([0, 1])
                 axes[i, 1].set_xlabel('Similarity score')
-
                 axes[i, 0].set_xticklabels(["Identical graphs", "Maximally different"], rotation=90)
                 axes[i, 0].set_title('Pairwise similarity')
                 sns.despine()
@@ -300,6 +300,7 @@ def compare_conditions(
                     palette=palette,
                     ax=ax[i]
                 )
+                axes[i, 0].set_ylim(0, 1)
                 ax[i].set_yticks([0, 1])
                 ax[i].set_yticklabels(["Identical graphs", "Maximally different"])
                 ax[i].set_ylabel("Similarity score")
@@ -336,7 +337,7 @@ def compare_conditions(
             elif tmp > 80:
                 return 10 ** 2
             else:
-                return 5
+                return 5 ** 2
 
         # Add the 'binned_variance' column
         result['binned_variance'] = result.apply(calculate_binned_variance, axis=1)
@@ -402,7 +403,8 @@ def compare_conditions(
             y=result["contrast"],
             c=result["median"],
             s=result["binned_variance"],
-            cmap=palette
+            cmap=palette,
+            vmin=0.0, vmax=1.0
         )
 
         ax.tick_params(axis='x', labelrotation=90)
@@ -418,8 +420,20 @@ def compare_conditions(
         divider1 = make_axes_locatable(ax)
         cax1 = divider1.append_axes('right', size='3%', pad=0.05)
         cbar1 = fig.colorbar(im1, cax=cax1, orientation='vertical')
+
         cbar1.set_ticks([0.0, 1.0])
         cbar1.set_ticklabels(['Identical Graphs', 'Maximally Different'])
+        # Define sizes and labels for the variance legend
+        sizes = [5**2, 10**2, 15**2, 20**2]  # Sizes from low to high variance
+        labels = ['High Variance', '', '', 'Low Variance']  # Corresponding labels
+
+        # Create legend elements for the sizes with labels
+        legend_elements = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='k',
+                           markersize=np.sqrt(size), label=label)
+                        for size, label in zip(sizes, labels)]  # Only create labeled elements
+
+        # Add a legend outside the plot, to the right
+        ax.legend(handles=legend_elements, loc='center left', bbox_to_anchor=(1.1, 0.5), frameon=False)
 
         if add_ncells_and_density_plots:
             # Plot 2
