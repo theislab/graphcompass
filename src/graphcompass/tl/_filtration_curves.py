@@ -115,6 +115,8 @@ def compare_conditions(
             weights = adj_matrix
 
         for i, j, weight in zip(weights.row, weights.col, weights.data):
+            if weight == 0:
+                continue
             if i <= j:  # This ensures that each edge is considered only once
                 edge_id = graph.get_eid(i, j)
                 graph.es[edge_id]['weight'] = weight
