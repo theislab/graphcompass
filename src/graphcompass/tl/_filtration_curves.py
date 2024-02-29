@@ -115,8 +115,6 @@ def compare_conditions(
             weights = adj_matrix
 
         for i, j, weight in zip(weights.row, weights.col, weights.data):
-            if weight == 0:
-                continue
             if i <= j:  # This ensures that each edge is considered only once
                 edge_id = graph.get_eid(i, j)
                 graph.es[edge_id]['weight'] = weight
@@ -199,8 +197,9 @@ def _compute_edge_weights(gene_expression_matrix, adjacency_matrix):
                     gene_expression_matrix[i].toarray()[0],
                     gene_expression_matrix[j].toarray()[0],
                 )
-            edge_weights[i, j] = distance
-            edge_weights[j, i] = distance  # Assuming undirected graph
+            if distance > 0:
+                edge_weights[i, j] = distance
+                edge_weights[j, i] = distance  # Assuming undirected graph
 
     return edge_weights
 
