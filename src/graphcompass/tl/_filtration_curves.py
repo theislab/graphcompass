@@ -1,4 +1,5 @@
 
+import warnings
 import itertools
 from tqdm import tqdm
 
@@ -13,7 +14,7 @@ from scipy.sparse import csr_matrix
 from anndata import AnnData
 from igraph import Graph
 
-from typing import Optional
+from typing import Optional, List
 
 from graphcompass.tl.utils import _calculate_graph
 
@@ -24,7 +25,7 @@ def compare_conditions(
     cluster_key: str = "cell_type",
     condition_key: str = "condition",
     attribute: str = "weight",
-    sample_ids: Optional[list[str]] = None,
+    sample_ids: Optional[List[str]] = None,
     compute_spatial_graphs: bool = True,
     kwargs_nhood_enrich: dict = {},
     kwargs_spatial_neighbors: dict = {},
@@ -200,6 +201,10 @@ def _compute_edge_weights(gene_expression_matrix, adjacency_matrix):
             if distance > 0:
                 edge_weights[i, j] = distance
                 edge_weights[j, i] = distance  # Assuming undirected graph
+            elif distance == 0:
+                warnings.warn("This edge's weight is zero. The edge will be removed.")
+            else:
+                warnings.warn("This edge's weight is negative or Not a Number (NaN). The edge will be removed.")
 
     return edge_weights
 
