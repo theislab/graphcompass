@@ -1,4 +1,4 @@
-# GraphCompass
+![GraphCompass](graphcompass_logo.jpg)
 GraphCompass (**Graph** **Comp**arison Tools for Differential **A**nalyses in **S**patial **S**ystems) is a Python-based framework that brings together a robust suite of graph analysis and visualization methods, specifically tailored for the differential analysis of cell spatial organization using spatial omics data.
 
 It is developed on top on [`Squidpy`](https://github.com/scverse/squidpy/) and [`AnnData`](https://github.com/scverse/anndata).
@@ -23,19 +23,21 @@ Tutorials for the different methods can be found in the `notebooks` folder.
 
 
 ## Requirements
-You will find all the necessary dependencies in the `requirements.txt` file:
-```console
-$ pip install -r requirements.txt
-```
-**[COMING SOON]** All dependencies will be moved to `pyproject.toml`
+You will find all the necessary dependencies in the `pyproject.toml` and `requirements.txt` files.
 
 ## Installation
-You can install _GraphCompass_ by cloning the repository and running:
+You can install _GraphCompass_ via [pip] from [PyPI](https://pypi.org/project/graphcompass/).
+ ```console
+$ pip install graphcompass
+```
+
+or
+you can install _GraphCompass_ by cloning the repository and running:
 ```console
 $ pip install -e .
 ```
 
-**[COMING SOON]** You can install _GraphCompass_ via [pip] from [PyPI].
+ 
 
 ## Usage
 
