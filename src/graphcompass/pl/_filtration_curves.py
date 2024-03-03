@@ -121,6 +121,12 @@ def compare_conditions(
         # Set title
         axes[i].set_title(f'Step Plot for Column {key}')
 
+        # Set x-axis label
+        axes[i].set_xlabel('Edge weight threshold')
+
+        # Set y-axis label
+        axes[i].set_ylabel('Cell count')
+
         # Add legend
         handles, labels = axes[i].get_legend_handles_labels()
         by_label = dict(zip(labels, handles))
