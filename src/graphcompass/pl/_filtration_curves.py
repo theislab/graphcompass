@@ -20,6 +20,7 @@ def compare_conditions(
     figsize: Union[Tuple[float, float], None] = None,
     dpi: Union[int, None] = 300,
     palette: str = "Set2",
+    right: Union[int, float, None] = None,
     save: Union[str, Path, None] = None,
     **kwargs: Any,
 ) -> Union[Axes, Sequence[Axes], None]:
@@ -42,6 +43,8 @@ def compare_conditions(
         Figure resolution.
     palette
         matplotlib colormap name.
+    right
+        Right x-axis limit.
     save
         Filename under which to save the plot.
     **kwargs
@@ -101,8 +104,6 @@ def compare_conditions(
     grouped_df = combined_df.groupby(['graph_label', 'weight'])
     average_df = grouped_df.mean().reset_index()
 
-    custom_xticks = [round(val, 1) for val in threshold_vals]
-
     for i, key in enumerate(node_labels):
         # Plot mean filtration curves
         for graph_label in pd.unique(average_df.graph_label):
@@ -116,7 +117,12 @@ def compare_conditions(
             )
 
         # Set custom values on the x-axis
+        custom_xticks = [round(val, 1) for val in threshold_vals]
         axes[i].set_xticks(custom_xticks)
+
+        # Set maximum value for the x-axis
+        if right is not None:
+            axes[i].set_xlim(right=right)
 
         # Set title
         axes[i].set_title(f'Step Plot for Column {key}')
