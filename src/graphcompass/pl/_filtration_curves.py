@@ -73,7 +73,7 @@ def compare_conditions(
     # Get unique categories in 'graph_label'
     unique_categories = np.unique(
         np.concatenate(
-            [df["graph_label"].unique() for df in filtration_curves]
+            [df["graph_label"].unique() for df in filtration_curves.values()]
         )
     )
 
@@ -83,7 +83,7 @@ def compare_conditions(
     }
 
     # Iterate over each DataFrame and cell type
-    for df in filtration_curves:
+    for df in filtration_curves.values():
         label = pd.unique(df.graph_label)
         assert label.size == 1
         for i, key in enumerate(node_labels):
@@ -100,7 +100,7 @@ def compare_conditions(
                 continue
 
     # Create mean filtration curves
-    combined_df = pd.concat(filtration_curves)
+    combined_df = pd.concat(filtration_curves.values())
     grouped_df = combined_df.groupby(['graph_label', 'weight'])
     average_df = grouped_df.mean().reset_index()
 
@@ -122,7 +122,7 @@ def compare_conditions(
 
         # Set maximum value for the x-axis
         if right is not None:
-            axes[i].set_xlim(right=right)
+            axes[i].set_xlim(left=0, right=right)
 
         # Set title
         axes[i].set_title(f'Step Plot for Column {key}')
@@ -136,7 +136,7 @@ def compare_conditions(
         # Add legend
         handles, labels = axes[i].get_legend_handles_labels()
         by_label = dict(zip(labels, handles))
-        axes[i].legend(by_label.values(), by_label.keys(), title='Graph label')
+        axes[i].legend(by_label.values(), by_label.keys(), title='Graph label', loc='upper right')
 
     plt.tight_layout()
     if save is not None:

@@ -160,7 +160,8 @@ def compare_conditions(
 
     print("Done!")
     adata.uns["filtration_curves"] = {}
-    adata.uns["filtration_curves"]["curves"] = filtration_curves
+    my_curves = {str(key): x for key, x in zip(samples, filtration_curves)}
+    adata.uns["filtration_curves"]["curves"] = my_curves
     adata.uns["filtration_curves"]["threshold_vals"] = threshold_vals
 
     if copy:
