@@ -122,7 +122,7 @@ def compare_conditions(
 
         # Set maximum value for the x-axis
         if right is not None:
-            axes[i].set_xlim(right=right)
+            axes[i].set_xlim(left=0, right=right)
 
         # Set title
         axes[i].set_title(f'Step Plot for Column {key}')
@@ -136,7 +136,7 @@ def compare_conditions(
         # Add legend
         handles, labels = axes[i].get_legend_handles_labels()
         by_label = dict(zip(labels, handles))
-        axes[i].legend(by_label.values(), by_label.keys(), title='Graph label')
+        axes[i].legend(by_label.values(), by_label.keys(), title='Graph label', loc='upper right')
 
     plt.tight_layout()
     if save is not None:
