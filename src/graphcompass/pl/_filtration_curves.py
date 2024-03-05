@@ -73,7 +73,7 @@ def compare_conditions(
     # Get unique categories in 'graph_label'
     unique_categories = np.unique(
         np.concatenate(
-            [df["graph_label"].unique() for df in filtration_curves]
+            [df["graph_label"].unique() for df in filtration_curves.values()]
         )
     )
 
@@ -83,7 +83,7 @@ def compare_conditions(
     }
 
     # Iterate over each DataFrame and cell type
-    for df in filtration_curves:
+    for df in filtration_curves.values():
         label = pd.unique(df.graph_label)
         assert label.size == 1
         for i, key in enumerate(node_labels):
@@ -100,7 +100,7 @@ def compare_conditions(
                 continue
 
     # Create mean filtration curves
-    combined_df = pd.concat(filtration_curves)
+    combined_df = pd.concat(filtration_curves.values())
     grouped_df = combined_df.groupby(['graph_label', 'weight'])
     average_df = grouped_df.mean().reset_index()
 
