@@ -17,6 +17,7 @@ def compare_conditions(
     cluster_key: str = "cell_type",
     cell_types_keys: list = None,
     compute_spatial_graphs: bool = True,
+    num_iterations: int = 3,
     kwargs_nhood_enrich={},
     kwargs_spatial_neighbors={},
     copy: bool = False,
@@ -82,8 +83,7 @@ def compare_conditions(
             for sample in samples:
                 adata_sample = adata[adata.obs[library_key] == sample]
                 status.append(adata_sample.obs[library_key][0])
-                graphs.append(_get_igraph(adata_sample, 
-                                        cluster_key=None))
+                graphs.append(_get_igraph(adata_sample, cluster_key=None))
                 
                 node_features.append(np.array(adata_sample.obs[cell_type_key].values))
                 cell_types.append(np.full(len(adata_sample.obs[cell_type_key]), cell_type_key))
@@ -91,8 +91,8 @@ def compare_conditions(
             node_features = np.array(node_features)
             
             # compute the kernel
-            kernel_matrix = wwl(graphs, node_features=node_features, num_iterations=4)
-            wasserstein_distance = pairwise_wasserstein_distance(graphs, node_features=node_features)
+            kernel_matrix = wwl(graphs, node_features=node_features, num_iterations=num_iterations)
+            wasserstein_distance = pairwise_wasserstein_distance(graphs, node_features=node_features, num_iterations=num_iterations)
 
             adata.uns["wl_kernel"][cell_type_key]["kernel_matrix"] = pd.DataFrame(kernel_matrix, columns=samples, index=samples)
             adata.uns["wl_kernel"][cell_type_key]["wasserstein_distance"] = pd.DataFrame(wasserstein_distance, columns=samples, index=samples)
