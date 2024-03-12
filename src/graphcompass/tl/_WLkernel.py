@@ -117,10 +117,10 @@ def compare_conditions(
         print("Computing WWL kernel matrix...")
         kernel_matrix = wwl(graphs, 
                             node_features=node_features, 
-                            num_iterations=4)
+                            num_iterations=num_iterations)
         
         print("Wasserstein distance between conditions...")
-        wasserstein_distance = pairwise_wasserstein_distance(graphs, node_features=node_features)
+        wasserstein_distance = pairwise_wasserstein_distance(graphs, node_features=node_features, num_iterations=num_iterations)
 
         adata.uns["wl_kernel"]["kernel_matrix"] = pd.DataFrame(kernel_matrix, columns=samples, index=samples)
         adata.uns["wl_kernel"]["wasserstein_distance"] = pd.DataFrame(wasserstein_distance, columns=samples, index=samples)
