@@ -88,13 +88,14 @@ def compare_conditions(
                 node_features.append(np.array(adata_sample.obs[cell_type_key].values))
                 cell_types.append(np.full(len(adata_sample.obs[cell_type_key]), cell_type_key))
             
-            node_features = np.array(node_features)
+            node_features = np.array(node_features, dtype=object)
             
             # compute the kernel
-            kernel_matrix = wwl(graphs, node_features=node_features, num_iterations=num_iterations)
+            ## Commented due to incompatibility of wwl with newer numpy version
+            #kernel_matrix = wwl(graphs, node_features=node_features, num_iterations=num_iterations)
             wasserstein_distance = pairwise_wasserstein_distance(graphs, node_features=node_features, num_iterations=num_iterations)
 
-            adata.uns["wl_kernel"][cell_type_key]["kernel_matrix"] = pd.DataFrame(kernel_matrix, columns=samples, index=samples)
+            #adata.uns["wl_kernel"][cell_type_key]["kernel_matrix"] = pd.DataFrame(kernel_matrix, columns=samples, index=samples)
             adata.uns["wl_kernel"][cell_type_key]["wasserstein_distance"] = pd.DataFrame(wasserstein_distance, columns=samples, index=samples)
                         
     else:
@@ -112,19 +113,20 @@ def compare_conditions(
                 features = features.toarray()
             node_features.append(np.array(features))
 
-        node_features = np.array(node_features)
+        node_features = np.array(node_features, dtype=object)
         # compute the kernel
-        print("Computing WWL kernel matrix...")
-        kernel_matrix = wwl(graphs, 
-                            node_features=node_features, 
-                            num_iterations=num_iterations)
-        
+        # Commented due to incompatibility of wwl with newer numpy version
+        #print("Computing WWL kernel matrix...")
+        #kernel_matrix = wwl(graphs, 
+        #                    node_features=node_features, 
+        #                    num_iterations=num_iterations)
+        #
         print("Wasserstein distance between conditions...")
         wasserstein_distance = pairwise_wasserstein_distance(graphs, node_features=node_features, num_iterations=num_iterations)
 
-        adata.uns["wl_kernel"]["kernel_matrix"] = pd.DataFrame(kernel_matrix, columns=samples, index=samples)
+        #adata.uns["wl_kernel"]["kernel_matrix"] = pd.DataFrame(kernel_matrix, columns=samples, index=samples)
         adata.uns["wl_kernel"]["wasserstein_distance"] = pd.DataFrame(wasserstein_distance, columns=samples, index=samples)
 
     print("Done!")
     if copy:
-        return kernel_matrix, wasserstein_distance
+        return wasserstein_distance#, kernel_matrix
