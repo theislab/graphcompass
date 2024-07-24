@@ -12,9 +12,9 @@ Visit our [`repository`](https://github.com/theislab/graphcompass/) for document
 - Entire graphs comparison.
 
 ## Installation
-Install GraphCompass via PyPI by running::
+Install GraphCompass via PyPI by running:
 
     pip install graphcompass
 
 ## Contributing to GraphCompass
-We are happy about any contributions!
+We are happy to collaborate. If you want to contribute to GraphCompass, head over to our GitHub repository and open an issue to discuss what you would like to change.
