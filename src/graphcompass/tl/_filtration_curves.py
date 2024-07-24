@@ -1,3 +1,4 @@
+"""Functions for graph comparisons using filtration curves."""
 
 import warnings
 import itertools
@@ -33,7 +34,7 @@ def compare_conditions(
     **kwargs,
 ) -> AnnData:
     """
-    Compare conditions based on filteration curves.
+    Compares conditions based on filtration curves.
 
     Parameters:
     ------------
@@ -51,7 +52,7 @@ def compare_conditions(
     sample_ids
         List of sample/library identifiers.
     compute_spatial_graphs
-        Set False if spatial graphs has been calculated or
+        Set to False if spatial graphs have been calculated or
         `sq.gr.spatial_neighbors` has already been run before.
     kwargs_nhood_enrich
         Additional arguments passed to :func:`squidpy.gr.nhood_enrichment` in
@@ -62,7 +63,7 @@ def compare_conditions(
     kwargs
         Additional arguments passed to :func:`graphcompass.tl.utils._calculate_graph`.
     copy
-        Whether to copy the AnnData object or modify it in place.
+        Whether to return a copy of the filtration curves object.
     Returns
     -------
     If ``copy = True``, returns a :class:`list` of filtration dataframes.
@@ -74,8 +75,8 @@ def compare_conditions(
         adata = adata.copy()
 
     # Create graph from spatial coordinates
-    print("Computing spatial graph...")
     if compute_spatial_graphs:
+        print("Computing spatial graphs...")
         _calculate_graph(
             adata,
             library_key=library_key,
@@ -84,6 +85,8 @@ def compare_conditions(
             kwargs_spatial_neighbors=kwargs_spatial_neighbors,
             **kwargs
         )
+    else:
+        print("Spatial graphs were previously computed. Skipping computing spatial graphs...")
 
     print("Computing edge weights...")
     # Compute edge weights
@@ -176,9 +179,9 @@ def _compute_edge_weights(gene_expression_matrix, adjacency_matrix):
     Parameters:
     ------------
     gene_expression_matrix:
-        Gene expression data, typically stored in adata.X
+        Gene expression data, typically stored in adata.X.
     adjacency_matrix:
-        Connection matrix built by Squidpy's spatial_neighbors function
+        Connection matrix built by Squidpy's spatial_neighbors function.
 
     Returns
     -------
@@ -236,7 +239,7 @@ def _create_filtration_curves(
     -------
         List of filtrations.
     """
-    # Ensures edge weights were assigned
+    # Ensure edge weights were assigned
     for graph in graphs:
         assert "weight" in graph.edge_attributes()
 
@@ -250,7 +253,7 @@ def _create_filtration_curves(
         label: index for index, label in enumerate(sorted(node_labels))
     }
 
-    # Builds the filtration using the edge weights
+    # Build the filtration using the edge weights
     filtrated_graphs = [
         _filtration_by_edge_attribute(
             graph,
