@@ -1,4 +1,4 @@
-"""Functions for graph comparison diffusion analysis (portrait,  diffusion etc.)."""
+"""Functions for portrait- and diffusion-based graph comparisons."""
 
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ def compare_conditions(
     # in parallel manner
 
     """
-    Compare conditions based of cell type specific subgraphs using distance methods.
+    Compares conditions based on cell-type-specific subgraphs using distance methods.
 
     Parameters:
     ------------
@@ -71,11 +71,11 @@ def compare_conditions(
     contrasts
         List of tuples or lists defining which sample groups to compare.
     method
-        Indicates whether to use network portrait divergence (method = 'portrait') or diffusion (method = 'diffusion')
+        Indicates whether to use network portrait divergence (method = 'portrait') or diffusion (method = 'diffusion').
     portrait_flavour
         Indicates whether to use the Python or C++ implementation of network portrait divergence when method is 'portrait'.
     compute_spatial_graphs
-        Set False if spatial graphs has been calculated or `sq.gr.spatial_neighbors` has already been run before.
+        Set to False if spatial graphs have been calculated or `sq.gr.spatial_neighbors` has already been run before.
     kwargs_nhood_enrich
         Additional arguments passed to :func:`squidpy.gr.nhood_enrichment` in `graphcompass.tl.utils._calculate_graph`. 
     kwargs_spatial_neighbors
@@ -83,10 +83,7 @@ def compare_conditions(
     kwargs
         Additional arguments passed to :func:`graphcompass.tl._calculate_graph`.
     copy
-        Whether to copy the AnnData object or modify it inplace.
-    Returns
-    -------
-    If ``copy = True``, returns a :class:`dict` with the z-score and the enrichment count per sample.
+        Whether to return a copy of the pairwise similarities object.
     """
 
     if not isinstance(adata, AnnData):
@@ -108,7 +105,7 @@ def compare_conditions(
             **kwargs
         )
     else:
-        print("Spatial graphs were previously computed. Skipping computing spatial graphs ")
+        print("Spatial graphs were previously computed. Skipping computing spatial graphs...")
     # calculate graph distances
     print("Computing graph similarities...")
     pairwise_similarities = _calculate_graph_distances(
@@ -139,11 +136,11 @@ def _calculate_graph_distances(
     
     if cell_types is None:
         cell_types = adata.obs[cluster_key].unique().tolist()
-        # TODO: add parameter number of cell types allowed in a graph (default=1)
-        # find all combinatorials of cell types with n_cell_types_per_graph
+        # TODO: add parameter to specify number of cell types allowed in a graph (default=1)
+        # find all combinations of cell types with n = n_cell_types_per_graph
         # if n_cell_types_per_graph > 1:
-        #     # add permutation of cell types
-        # cell_types = itertools.product(cell_types, cell_types
+        #     # add cell type combination
+        # cell_types = itertools.product(cell_types, cell_types)
 
     if not isinstance(cell_types, list):
         raise TypeError("Parameter 'cell_types' must be a list.")
@@ -193,7 +190,7 @@ def _calculate_graph_distance(
     min_cells: int = 10,
 ) -> tuple[str, str, float, str]:
     """
-    Calculates the similarity between two neighbourhood graphs, taking into account graph emptiness and cell density.
+    Calculates the similarity between two neighborhood graphs, taking into account graph emptiness and cell density.
     """
     if not isinstance(adata, AnnData):
         raise TypeError("Parameter 'adata' must be an AnnData object.")
@@ -209,7 +206,7 @@ def _calculate_graph_distance(
         adata_b = adata_sample_b[adata_sample_b.obs[cluster_key].isin(cell_type)]
     else:
         raise ValueError(
-            "Parameter 'cell_type' must be of type either str or list."
+            "Parameter 'cell_type' must be of type str or list."
         )
         
     ncells_a = len(adata_a)
@@ -224,7 +221,7 @@ def _calculate_graph_distance(
 
     # Check for empty graphs
     if graph_a.size == 0 or graph_b.size == 0:
-        # Handle empty graph case, e.g., assign maximum dissimilarity
+        # Handle empty graph case; e.g., assign maximum dissimilarity
         return (sample_a, sample_b, cell_type, ncells_a, ncells_b, density_a, density_b, 1.0 if graph_a.size != graph_b.size else 0.0)
     
     similarity_score = compare_graphs(graph_a, graph_b, method)
@@ -234,7 +231,7 @@ def _calculate_graph_distance(
 
 def _calculate_graph_density(graph: Union[nx.Graph, scipy.sparse._csr.csr_matrix]) -> float:
     """
-    Calculate a density metric for a graph.
+    Calculates a density metric for a graph.
     """
     if isinstance(graph, scipy.sparse._csr.csr_matrix):
         graph = nx.from_scipy_sparse_array(graph)
@@ -255,21 +252,21 @@ def compare_graphs(graph_a: Union[nx.Graph, scipy.sparse._csr.csr_matrix],
                    graph_b: Union[nx.Graph, scipy.sparse._csr.csr_matrix],
                    method: str, portrait_flavour: str = "python") -> float: 
     """
-    Calculates the similarity between two neighbourhood graphs.
+    Calculates the similarity between two neighborhood graphs.
 
     Parameters:
     ------------
     graph_a
-        First squidpy-computed neighbourhood graph.
+        First squidpy-computed neighborhood graph.
     graph_b
-        Second squidpy-computed neighbourhood graph.
+        Second squidpy-computed neighborhood graph.
     method (str)
-        Indicates whether to use network portrait divergence (method = 'portrait') or diffusion (method = 'diffusion')
+        Indicates whether to use network portrait divergence (method = 'portrait') or diffusion (method = 'diffusion').
     portrait_flavour (str)
         Indicates whether to use the Python or C++ implementation of network portrait divergence when method is 'portrait'.
     Returns
     -------
-    If 'method' is portrait, a single float is returned. A score of 0 indicates identical graphs, 1 maximally different.
+    If 'method' is portrait, a single float is returned. If graphs are identical, 0 is returned. If graphs are maximally different, 1 is returned.
     """
     if not method in ["diffusion", "portrait"]:
         raise ValueError("Parameter 'method' must be either 'diffusion' or 'portrait'.")
@@ -311,13 +308,13 @@ def compare_groups(
     Parameters:
     ------------
     pairwise_similarities
-        pandas.DataFrame containing all pairwise similarity scores
+        pandas.DataFrame containing all pairwise similarity scores.
     sample_to_contrasts
-        pandas.DataFrame establishing which sample_ids belong to which contrast
+        pandas.DataFrame establishing which sample_ids correspond to which contrast.
     contrasts
-        list of tuples or lists defining which sample groups to compare
+        List of tuples or lists defining which sample groups to compare.
     output_format
-        defines wheather to return a tidy pandas.DataFrame or a dict
+        Whether to return a tidy pandas.DataFrame or a dict.
     Returns
     -------
     All similarity scores for the defined contrasts.
@@ -392,11 +389,11 @@ def _diffusion_featurization(
     adjacency_matrix: Union[np.ndarray, scipy.sparse._csr.csr_matrix],
 ):
     """
-    Given a graph's adjacency matrix, compute a vector describing that graph using NetSLD (arXiv:1805.1071).
+    Computes a vector describing a graph using NetSLD (arXiv:1805.1071), given that graph's adjacency matrix.
     Parameters:
     ------------
     adjacency_matrix
-        Array describing the graph in terms of the pairs of vertices are adjacent.
+        Array describing the graph in terms of the pairs of vertices that are adjacent.
         This array is stored in AnnData objects under .obsp['spatial_connectivities']
     Returns
     -------
@@ -412,13 +409,14 @@ def _pad_portraits_to_same_size(
     B1: Union[np.ndarray, scipy.sparse._csr.csr_matrix],
     B2: Union[np.ndarray, scipy.sparse._csr.csr_matrix]
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Make sure that two matrices are padded with zeros and/or trimmed of
-    zeros to be the same dimensions.
+    """
+    Ensures that two matrices are padded with zeros and/or trimmed of
+    zeros to be the same shape.
     """
     ns, ms = B1.shape
     nl, ml = B2.shape
 
-    # Bmats have N columns, find last *occupied* column and trim both down:
+    # Bmats have N columns; find last *occupied* column and trim both down:
     lastcol1 = max(np.nonzero(B1)[1])
     lastcol2 = max(np.nonzero(B2)[1])
     lastcol = max(lastcol1, lastcol2)
@@ -437,8 +435,9 @@ def _pad_portraits_to_same_size(
 def _graph_or_portrait(
         X: Union[nx.Graph, nx.DiGraph, scipy.sparse._csr.csr_matrix]
 ) -> Union[nx.Graph, nx.DiGraph, scipy.sparse._csr.csr_matrix]:
-    """Check if X is a nx (di)graph. If it is, get its portrait. Otherwise
-    assume it's a portrait and just return it.
+    """
+    Checks if X is a nx (di)graph. Obtains its portrait if it is.
+    Assumes it's a portrait otherwise and returns it.
     """
     if isinstance(X, (nx.Graph, nx.DiGraph)):
         return _calculate_portrait(X)
@@ -449,7 +448,7 @@ def _calculate_portrait_divergence(
     G: Union[nx.Graph, scipy.sparse._csr.csr_matrix],
     H: Union[nx.Graph, scipy.sparse._csr.csr_matrix]
 ) -> float:
-    """Compute the network portrait divergence between graphs G and H."""
+    """Computes the network portrait divergence between graphs G and H."""
 
     BG = _graph_or_portrait(G)
     BH = _graph_or_portrait(H)
@@ -483,13 +482,11 @@ def _calculate_portrait(
         keepfile=False
 ) -> np.ndarray:
 
-    """Compute and generate portrait of graph using compiled B_matrix
+    """
+    Computes and generates portrait of graph using compiled B_matrix
     executable.
 
-    Return matrix B where B[i,j] is the number of starting nodes in graph with
-    j nodes in shell i
-
-    Unoptimised, taken from https://github.com/bagrow/network-portrait-divergence/blob/72993c368114c2e834142787579466d673232fa4/portrait_divergence.py
+    Unoptimised; source: https://github.com/bagrow/network-portrait-divergence/blob/72993c368114c2e834142787579466d673232fa4/portrait_divergence.py
 
     """
 

@@ -23,7 +23,7 @@ Tutorials for the different methods can be found in the `notebooks` folder.
 
 
 ## Requirements
-You will find all the necessary dependencies in the `pyproject.toml` and `requirements.txt` files.
+You will find all the necessary dependencies in the `pyproject.toml` file. Dependencies are automatically installed when you install GraphCompass.
 
 ## Installation
 You can install _GraphCompass_ via [pip] from [PyPI](https://pypi.org/project/graphcompass/).

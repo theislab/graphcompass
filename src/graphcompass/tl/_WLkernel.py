@@ -1,4 +1,4 @@
-"""Functions for graph comparison using Weisfeiler-Lehman Graph kernel method."""
+"""Functions for graph comparisons using the Weisfeiler-Lehman Graph kernel method."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ def compare_conditions(
     adata: AnnData,
     library_key: str = "sample",
     cluster_key: str = "cell_type",
-    cell_types_keys: list = None,
+    cell_type_keys: list = None,
     compute_spatial_graphs: bool = True,
     num_iterations: int = 3,
     kwargs_nhood_enrich={},
@@ -24,28 +24,29 @@ def compare_conditions(
     **kwargs,
 ) -> AnnData:
     """
-    Compare conditions based on entire spatial graph using WWL Kernel.
+    Compares conditions based on entire spatial graphs using the WWL Kernel.
 
     Parameters
     ----------
     adata
         Annotated data object.
     library_key
-        Key in :attr:`anndata.AnnData.obs` where library information is stored.
+        If multiple `library_id`, column in :attr:`anndata.AnnData.obs`
+        which stores mapping between ``library_id`` and obs.
     cluster_key
         Key in :attr:`anndata.AnnData.obs` where clustering is stored.
-    cell_types_keys
+    cell_type_keys
         List of keys in :attr:`anndata.AnnData.obs` where cell types are stored.
     compute_spatial_graphs
-        Set False if spatial graphs has been calculated or `sq.gr.spatial_neighbors` has already been run before.
+        Set to False if spatial graphs have been calculated or `sq.gr.spatial_neighbors` has already been run before.
     kwargs_nhood_enrich
         Additional arguments passed to :func:`squidpy.gr.nhood_enrichment` in `graphcompass.tl.utils._calculate_graph`.   
     kwargs_spatial_neighbors
         Additional arguments passed to :func:`squidpy.gr.spatial_neighbors` in `graphcompass.tl.utils._calculate_graph`. 
+    kwargs
+        Additional arguments passed to :func:`graphcompass.tl._calculate_graph`.
     copy
-        Return a copy instead of writing to adata.
-    **kwargs
-        Keyword arguments to pass to :func:`squidpy.gr.spatial_neighbors`.
+        Whether to return a copy of the Wasserstein distance object.
     """
     
     if compute_spatial_graphs:
@@ -59,7 +60,7 @@ def compare_conditions(
                 **kwargs
         )
     else:
-        print("Spatial graphs were previously computed. Skipping computing spatial graphs ")
+        print("Spatial graphs were previously computed. Skipping computing spatial graphs...")
 
     samples = adata.obs[library_key].unique()
     
@@ -69,8 +70,8 @@ def compare_conditions(
 
     adata.uns["wl_kernel"] = {}
     adata.uns["wl_kernel"] = {}
-    if cell_types_keys:
-        for cell_type_key in cell_types_keys:
+    if cell_type_keys is not None:
+        for cell_type_key in cell_type_keys:
             graphs = []
             node_features = []
             status = []
@@ -88,13 +89,9 @@ def compare_conditions(
                 node_features.append(np.array(adata_sample.obs[cell_type_key].values))
                 cell_types.append(np.full(len(adata_sample.obs[cell_type_key]), cell_type_key))
             
-            node_features = np.array(node_features)
+            node_features = np.array(node_features, dtype=object)
             
-            # compute the kernel
-            kernel_matrix = wwl(graphs, node_features=node_features, num_iterations=num_iterations)
             wasserstein_distance = pairwise_wasserstein_distance(graphs, node_features=node_features, num_iterations=num_iterations)
-
-            adata.uns["wl_kernel"][cell_type_key]["kernel_matrix"] = pd.DataFrame(kernel_matrix, columns=samples, index=samples)
             adata.uns["wl_kernel"][cell_type_key]["wasserstein_distance"] = pd.DataFrame(wasserstein_distance, columns=samples, index=samples)
                         
     else:
@@ -112,19 +109,11 @@ def compare_conditions(
                 features = features.toarray()
             node_features.append(np.array(features))
 
-        node_features = np.array(node_features)
-        # compute the kernel
-        print("Computing WWL kernel matrix...")
-        kernel_matrix = wwl(graphs, 
-                            node_features=node_features, 
-                            num_iterations=num_iterations)
-        
-        print("Wasserstein distance between conditions...")
+        node_features = np.array(node_features, dtype=object)
+        print("Computing Wasserstein distance between conditions...")
         wasserstein_distance = pairwise_wasserstein_distance(graphs, node_features=node_features, num_iterations=num_iterations)
-
-        adata.uns["wl_kernel"]["kernel_matrix"] = pd.DataFrame(kernel_matrix, columns=samples, index=samples)
         adata.uns["wl_kernel"]["wasserstein_distance"] = pd.DataFrame(wasserstein_distance, columns=samples, index=samples)
 
     print("Done!")
     if copy:
-        return kernel_matrix, wasserstein_distance
+        return wasserstein_distance
