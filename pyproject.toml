@@ -77,7 +77,7 @@ dependencies = [
    "tifffile!=2022.4.22",
    "tqdm>=4.50.2",
    "validators>=0.18.2",
-   "wwl>=0.1.2",
+   "wwl@git+https://github.com/BorgwardtLab/WWL@b7aee69#egg=wwl&subdirectory=src",
    "xarray>=0.16.1",
    "zarr>=2.6.1",
 ]
@@ -175,6 +175,9 @@ lexicographical = true
 
 [tool.hatch.version]
 source = "vcs"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.ruff]
 exclude = [
