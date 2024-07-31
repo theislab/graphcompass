@@ -1,5 +1,6 @@
 # adapted from squidpy.datasets._dataset.py
 from __future__ import annotations
+
 from copy import copy
 
 from squidpy.datasets._utils import AMetadata

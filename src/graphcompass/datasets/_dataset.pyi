@@ -1,14 +1,11 @@
 # adapted from squidpy.datasets._dataset.pyi
-from typing import Any, Protocol, Union
+from typing import Any, Protocol
 
 from anndata import AnnData
-
 from squidpy.datasets._utils import PathLike
-
 
 class Dataset(Protocol):
     def __call__(self, path: PathLike | None = ..., **kwargs: Any) -> AnnData: ...
-
 
 mibitof_breast_cancer: Dataset
 visium_heart: Dataset

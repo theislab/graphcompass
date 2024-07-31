@@ -2,38 +2,24 @@
 
 from __future__ import annotations
 
-import scipy
+import itertools
 import os
-import netlsd
 import tempfile
 
-import itertools
-
+import netlsd
+import networkx as nx
 import numpy as np
 import pandas as pd
-
-import networkx as nx
-
+import scipy
+from anndata import AnnData
+from joblib import Parallel, delayed
+from numba import njit, prange  # noqa: F401
+from scipy.stats import entropy
+from squidpy._docs import d, inject_docs
 from tqdm import tqdm
 
-
-from typing import (
-    Union,  # noqa: F401
-)
-
-from joblib import delayed, Parallel
-
-
-from numba import njit, prange  # noqa: F401
-
-from anndata import AnnData
-
-from scipy.stats import entropy
-
-from squidpy._docs import d, inject_docs
-
 from graphcompass.tl.utils import _calculate_graph
- 
+
 
 def compare_conditions(
     adata: AnnData,
@@ -47,10 +33,9 @@ def compare_conditions(
     kwargs_nhood_enrich={},
     kwargs_spatial_neighbors={},
     copy: bool = False,
-
     **kwargs,
 ) -> AnnData:
-    # 1. calculate graph 
+    # 1. calculate graph
     # 2. calculate graph distances
     # 3. calculate graph similarities
     # 4. calculate graph similarities for contrasts
@@ -77,7 +62,7 @@ def compare_conditions(
     compute_spatial_graphs
         Set to False if spatial graphs have been calculated or `sq.gr.spatial_neighbors` has already been run before.
     kwargs_nhood_enrich
-        Additional arguments passed to :func:`squidpy.gr.nhood_enrichment` in `graphcompass.tl.utils._calculate_graph`. 
+        Additional arguments passed to :func:`squidpy.gr.nhood_enrichment` in `graphcompass.tl.utils._calculate_graph`.
     kwargs_spatial_neighbors
         Additional arguments passed to :func:`squidpy.gr.spatial_neighbors` in `graphcompass.tl.utils._calculate_graph`.
     kwargs
@@ -88,37 +73,42 @@ def compare_conditions(
 
     if not isinstance(adata, AnnData):
         raise TypeError("Parameter 'adata' must be an AnnData object.")
-    
+
     if copy:
         adata = adata.copy()
 
     # calculate graph
-    
+
     if compute_spatial_graphs:
         print("Computing spatial graphs...")
         _calculate_graph(
-            adata, 
+            adata,
             library_key=library_key,
-            cluster_key=cluster_key, 
+            cluster_key=cluster_key,
             kwargs_nhood_enrich=kwargs_nhood_enrich,
             kwargs_spatial_neighbors=kwargs_spatial_neighbors,
-            **kwargs
+            **kwargs,
         )
     else:
         print("Spatial graphs were previously computed. Skipping computing spatial graphs...")
     # calculate graph distances
     print("Computing graph similarities...")
     pairwise_similarities = _calculate_graph_distances(
-        adata, library_key=library_key, cluster_key=cluster_key, cell_types=cell_types, method=method, portrait_flavour=portrait_flavour
+        adata,
+        library_key=library_key,
+        cluster_key=cluster_key,
+        cell_types=cell_types,
+        method=method,
+        portrait_flavour=portrait_flavour,
     )
-    
+
     # insert pairwise similarities into adata
     adata.uns["pairwise_similarities"] = pairwise_similarities
 
     print("Done!")
     if copy:
         return pairwise_similarities
-    
+
 
 def _calculate_graph_distances(
     adata: AnnData,
@@ -130,10 +120,9 @@ def _calculate_graph_distances(
     portrait_flavour: str = "python",
     min_cells: int = 10,
 ) -> pd.DataFrame:
-    
     if not isinstance(adata, AnnData):
         raise TypeError("Parameter 'adata' must be an AnnData object.")
-    
+
     if cell_types is None:
         cell_types = adata.obs[cluster_key].unique().tolist()
         # TODO: add parameter to specify number of cell types allowed in a graph (default=1)
@@ -144,9 +133,8 @@ def _calculate_graph_distances(
 
     if not isinstance(cell_types, list):
         raise TypeError("Parameter 'cell_types' must be a list.")
-    
+
     samples = adata.obs[library_key].unique().tolist()
-    
 
     # Pre-allocate memory for results
     results = []
@@ -158,9 +146,9 @@ def _calculate_graph_distances(
     for cell_type in tqdm(cell_types):
         out = Parallel(n_jobs=n_jobs)(
             delayed(_calculate_graph_distance)(
-                adata=adata, 
-                sample_a=sample_a, 
-                sample_b=sample_b, 
+                adata=adata,
+                sample_a=sample_a,
+                sample_b=sample_b,
                 cell_type=cell_type,
                 method=method,
                 min_cells=min_cells,
@@ -173,17 +161,26 @@ def _calculate_graph_distances(
         results.extend(out)
 
     # Create DataFrame from results
-    column_names = ["sample_a", "sample_b", "cell_type", "ncells_a", "ncells_b", "density_a", "density_b", "similarity_score"]
+    column_names = [
+        "sample_a",
+        "sample_b",
+        "cell_type",
+        "ncells_a",
+        "ncells_b",
+        "density_a",
+        "density_b",
+        "similarity_score",
+    ]
     pairwise_similarities = pd.DataFrame(results, columns=column_names).dropna()
 
     return pairwise_similarities
-    
-    
+
+
 def _calculate_graph_distance(
     adata: AnnData,
     sample_a: str,
     sample_b: str,
-    cell_type: Union[str, list], # can be one cell type or list of cell types
+    cell_type: str | list,  # can be one cell type or list of cell types
     library_key: str = "sample",
     cluster_key: str = "cell_type",
     method: str = "portrait",
@@ -194,7 +191,7 @@ def _calculate_graph_distance(
     """
     if not isinstance(adata, AnnData):
         raise TypeError("Parameter 'adata' must be an AnnData object.")
-    
+
     adata_sample_a = adata[adata.obs[library_key] == sample_a]
     adata_sample_b = adata[adata.obs[library_key] == sample_b]
 
@@ -205,15 +202,13 @@ def _calculate_graph_distance(
         adata_a = adata_sample_a[adata_sample_a.obs[cluster_key].isin(cell_type)]
         adata_b = adata_sample_b[adata_sample_b.obs[cluster_key].isin(cell_type)]
     else:
-        raise ValueError(
-            "Parameter 'cell_type' must be of type str or list."
-        )
-        
+        raise ValueError("Parameter 'cell_type' must be of type str or list.")
+
     ncells_a = len(adata_a)
     ncells_b = len(adata_b)
 
-    graph_a = adata_a.obsp['spatial_connectivities']
-    graph_b = adata_b.obsp['spatial_connectivities']
+    graph_a = adata_a.obsp["spatial_connectivities"]
+    graph_b = adata_b.obsp["spatial_connectivities"]
 
     # Integrate cell density into the comparison
     density_a = _calculate_graph_density(graph_a)
@@ -222,23 +217,41 @@ def _calculate_graph_distance(
     # Check for empty graphs
     if graph_a.size == 0 or graph_b.size == 0:
         # Handle empty graph case; e.g., assign maximum dissimilarity
-        return (sample_a, sample_b, cell_type, ncells_a, ncells_b, density_a, density_b, 1.0 if graph_a.size != graph_b.size else 0.0)
-    
+        return (
+            sample_a,
+            sample_b,
+            cell_type,
+            ncells_a,
+            ncells_b,
+            density_a,
+            density_b,
+            1.0 if graph_a.size != graph_b.size else 0.0,
+        )
+
     similarity_score = compare_graphs(graph_a, graph_b, method)
 
-    return (sample_a, sample_b, cell_type, ncells_a, ncells_b, density_a, density_b, similarity_score)# adjusted_similarity_score)
+    return (
+        sample_a,
+        sample_b,
+        cell_type,
+        ncells_a,
+        ncells_b,
+        density_a,
+        density_b,
+        similarity_score,
+    )  # adjusted_similarity_score)
 
 
-def _calculate_graph_density(graph: Union[nx.Graph, scipy.sparse._csr.csr_matrix]) -> float:
+def _calculate_graph_density(graph: nx.Graph | scipy.sparse._csr.csr_matrix) -> float:
     """
     Calculates a density metric for a graph.
     """
     if isinstance(graph, scipy.sparse._csr.csr_matrix):
         graph = nx.from_scipy_sparse_array(graph)
-    
+
     num_nodes = graph.number_of_nodes()
     num_edges = graph.number_of_edges()
-    
+
     if num_nodes > 1:
         # Example density calculation
         density = num_edges / (num_nodes * (num_nodes - 1))
@@ -248,9 +261,12 @@ def _calculate_graph_density(graph: Union[nx.Graph, scipy.sparse._csr.csr_matrix
     return density
 
 
-def compare_graphs(graph_a: Union[nx.Graph, scipy.sparse._csr.csr_matrix], 
-                   graph_b: Union[nx.Graph, scipy.sparse._csr.csr_matrix],
-                   method: str, portrait_flavour: str = "python") -> float: 
+def compare_graphs(
+    graph_a: nx.Graph | scipy.sparse._csr.csr_matrix,
+    graph_b: nx.Graph | scipy.sparse._csr.csr_matrix,
+    method: str,
+    portrait_flavour: str = "python",
+) -> float:
     """
     Calculates the similarity between two neighborhood graphs.
 
@@ -268,13 +284,11 @@ def compare_graphs(graph_a: Union[nx.Graph, scipy.sparse._csr.csr_matrix],
     -------
     If 'method' is portrait, a single float is returned. If graphs are identical, 0 is returned. If graphs are maximally different, 1 is returned.
     """
-    if not method in ["diffusion", "portrait"]:
+    if method not in ["diffusion", "portrait"]:
         raise ValueError("Parameter 'method' must be either 'diffusion' or 'portrait'.")
 
     if portrait_flavour not in ["python", "cpp"]:
-        raise ValueError(
-            "Parameter 'portrait_flavour' must be either 'python' (default) or 'cpp'."
-        )
+        raise ValueError("Parameter 'portrait_flavour' must be either 'python' (default) or 'cpp'.")
 
     if method == "portrait":
         if isinstance(graph_a, scipy.sparse._csr.csr_matrix):
@@ -301,7 +315,7 @@ def compare_groups(
     sample_to_contrasts: pd.DataFrame,
     contrasts: list,
     output_format: str = "tidy",
-) -> Union[pd.DataFrame, dict]:
+) -> pd.DataFrame | dict:
     """
     Extracts the similarities between two contrasted groups of samples.
 
@@ -327,24 +341,15 @@ def compare_groups(
         raise TypeError("Parameter 'sample_to_contrasts' must be a pandas.DataFrame.")
 
     if not all(c in ["sample_id", "contrast"] for c in sample_to_contrasts.columns):
-        raise TypeError(
-            "Parameter 'sample_to_contrasts' must have the two columns 'sample_id' and 'contrast'."
-        )
+        raise TypeError("Parameter 'sample_to_contrasts' must have the two columns 'sample_id' and 'contrast'.")
 
     if not isinstance(contrasts, list):
         raise TypeError("Parameter 'contrasts' must be a list.")
 
     sample_ids = pairwise_similarities.columns
 
-    if not all(
-        [
-            sample_id in sample_to_contrasts.sample_id.tolist()
-            for sample_id in sample_ids
-        ]
-    ):
-        raise ValueError(
-            "All samples in 'pairwise_similarities' must also be found in 'sample_to_contrasts'."
-        )
+    if not all(sample_id in sample_to_contrasts.sample_id.tolist() for sample_id in sample_ids):
+        raise ValueError("All samples in 'pairwise_similarities' must also be found in 'sample_to_contrasts'.")
 
     if output_format not in ["tidy", "dict"]:
         raise ValueError("Parameter 'output_format' must be either 'tidy' or 'dict'.")
@@ -355,16 +360,10 @@ def compare_groups(
         output = {}
 
     for contrast_a, contrast_b in contrasts:
-        contrast_a_sample_ids = sample_to_contrasts.loc[
-            sample_to_contrasts.contrast == contrast_a
-        ].sample_id.tolist()
-        contrast_b_sample_ids = sample_to_contrasts.loc[
-            sample_to_contrasts.contrast == contrast_b
-        ].sample_id.tolist()
+        contrast_a_sample_ids = sample_to_contrasts.loc[sample_to_contrasts.contrast == contrast_a].sample_id.tolist()
+        contrast_b_sample_ids = sample_to_contrasts.loc[sample_to_contrasts.contrast == contrast_b].sample_id.tolist()
 
-        vals = pairwise_similarities.loc[
-            contrast_a_sample_ids, contrast_b_sample_ids
-        ].values
+        vals = pairwise_similarities.loc[contrast_a_sample_ids, contrast_b_sample_ids].values
         vals = [item for sublist in vals for item in sublist]
 
         if output_format == "tidy":
@@ -386,7 +385,7 @@ def compare_groups(
 
 
 def _diffusion_featurization(
-    adjacency_matrix: Union[np.ndarray, scipy.sparse._csr.csr_matrix],
+    adjacency_matrix: np.ndarray | scipy.sparse._csr.csr_matrix,
 ):
     """
     Computes a vector describing a graph using NetSLD (arXiv:1805.1071), given that graph's adjacency matrix.
@@ -406,8 +405,7 @@ def _diffusion_featurization(
 @d.dedent
 @inject_docs(tl="graphcompass.tl")
 def _pad_portraits_to_same_size(
-    B1: Union[np.ndarray, scipy.sparse._csr.csr_matrix],
-    B2: Union[np.ndarray, scipy.sparse._csr.csr_matrix]
+    B1: np.ndarray | scipy.sparse._csr.csr_matrix, B2: np.ndarray | scipy.sparse._csr.csr_matrix
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Ensures that two matrices are padded with zeros and/or trimmed of
@@ -433,8 +431,8 @@ def _pad_portraits_to_same_size(
 
 
 def _graph_or_portrait(
-        X: Union[nx.Graph, nx.DiGraph, scipy.sparse._csr.csr_matrix]
-) -> Union[nx.Graph, nx.DiGraph, scipy.sparse._csr.csr_matrix]:
+    X: nx.Graph | nx.DiGraph | scipy.sparse._csr.csr_matrix,
+) -> nx.Graph | nx.DiGraph | scipy.sparse._csr.csr_matrix:
     """
     Checks if X is a nx (di)graph. Obtains its portrait if it is.
     Assumes it's a portrait otherwise and returns it.
@@ -445,8 +443,7 @@ def _graph_or_portrait(
 
 
 def _calculate_portrait_divergence(
-    G: Union[nx.Graph, scipy.sparse._csr.csr_matrix],
-    H: Union[nx.Graph, scipy.sparse._csr.csr_matrix]
+    G: nx.Graph | scipy.sparse._csr.csr_matrix, H: nx.Graph | scipy.sparse._csr.csr_matrix
 ) -> float:
     """Computes the network portrait divergence between graphs G and H."""
 
@@ -475,13 +472,7 @@ def _calculate_portrait_divergence(
 
 @d.dedent
 @inject_docs(tl="graphcompass.tl")
-def _calculate_portrait(
-        graph: Union[nx.Graph, nx.DiGraph],
-        method: str = "python", 
-        fname=None, 
-        keepfile=False
-) -> np.ndarray:
-
+def _calculate_portrait(graph: nx.Graph | nx.DiGraph, method: str = "python", fname=None, keepfile=False) -> np.ndarray:
     """
     Computes and generates portrait of graph using compiled B_matrix
     executable.
@@ -506,13 +497,13 @@ def _calculate_portrait(
         nx.write_edgelist(graph, f + ".edgelist", data=False)
 
         # make B-matrix:
-        os.system("./B_matrix {}.edgelist {}.Bmat > /dev/null".format(f, f))
-        portrait = np.loadtxt("{}.Bmat".format(f))
+        os.system(f"./B_matrix {f}.edgelist {f}.Bmat > /dev/null")
+        portrait = np.loadtxt(f"{f}.Bmat")
 
         # clean up:
         if not keepfile:
-            os.remove(f + ".edgelist")
-            os.remove(f + ".Bmat")
+            os.remove(f + ".edgelist")  # noqa: PTH107
+            os.remove(f + ".Bmat")  # noqa: PTH107
 
     elif method == "python":
         dia = 500  # nx.diameter(graph)

@@ -1,4 +1,5 @@
 """Sphinx configuration."""
+
 project = "Graph-COMPASS"
 author = "Mayar Ali and Merel Kuijs"
 copyright = "2024, Mayar Ali and Merel Kuijs"

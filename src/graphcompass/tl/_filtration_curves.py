@@ -1,21 +1,17 @@
 """Functions for graph comparisons using filtration curves."""
 
-import warnings
 import itertools
-from tqdm import tqdm
+import warnings
+from typing import Optional
 
 import numpy as np
 import pandas as pd
-
 import scipy.sparse
-
-from scipy.spatial.distance import euclidean
-from scipy.sparse import csr_matrix
-
 from anndata import AnnData
 from igraph import Graph
-
-from typing import Optional, List
+from scipy.sparse import csr_matrix
+from scipy.spatial.distance import euclidean
+from tqdm import tqdm
 
 from graphcompass.tl.utils import _calculate_graph
 
@@ -26,7 +22,7 @@ def compare_conditions(
     cluster_key: str = "cell_type",
     condition_key: str = "condition",
     attribute: str = "weight",
-    sample_ids: Optional[List[str]] = None,
+    sample_ids: Optional[list[str]] = None,
     compute_spatial_graphs: bool = True,
     kwargs_nhood_enrich: dict = {},
     kwargs_spatial_neighbors: dict = {},
@@ -83,7 +79,7 @@ def compare_conditions(
             cluster_key=cluster_key,
             kwargs_nhood_enrich=kwargs_nhood_enrich,
             kwargs_spatial_neighbors=kwargs_spatial_neighbors,
-            **kwargs
+            **kwargs,
         )
     else:
         print("Spatial graphs were previously computed. Skipping computing spatial graphs...")
@@ -91,11 +87,10 @@ def compare_conditions(
     print("Computing edge weights...")
     # Compute edge weights
     edge_weights = _compute_edge_weights(
-        gene_expression_matrix=adata.X,
-        adjacency_matrix=adata.obsp['spatial_connectivities']
+        gene_expression_matrix=adata.X, adjacency_matrix=adata.obsp["spatial_connectivities"]
     )
 
-    adata.obsp['edge_weights'] = edge_weights
+    adata.obsp["edge_weights"] = edge_weights
 
     graphs = []
     node_labels = set()
@@ -109,8 +104,8 @@ def compare_conditions(
         # Create an igraph graph (initially unweighted) from the adjacency
         # matrix
         patient_data = adata[adata.obs[library_key] == sample]
-        adj_matrix = patient_data.obsp['edge_weights']
-        graph = Graph.Adjacency((adj_matrix > 0), mode='undirected')
+        adj_matrix = patient_data.obsp["edge_weights"]
+        graph = Graph.Adjacency((adj_matrix > 0), mode="undirected")
 
         # Extract weights from the sparse matrix and assign them to the edges
         if scipy.sparse.issparse(adj_matrix):
@@ -121,18 +116,18 @@ def compare_conditions(
         for i, j, weight in zip(weights.row, weights.col, weights.data):
             if i <= j:  # This ensures that each edge is considered only once
                 edge_id = graph.get_eid(i, j)
-                graph.es[edge_id]['weight'] = weight
+                graph.es[edge_id]["weight"] = weight
 
         # Assign cell type labels to nodes
         labels = patient_data.obs[cluster_key]
 
         for i, attribute in enumerate(labels):
-            graph.vs[i]['label'] = attribute
+            graph.vs[i]["label"] = attribute
 
         # Assign label to graph
         graph_label = pd.unique(patient_data.obs[condition_key])
         assert graph_label.size == 1
-        graph['label'] = graph_label[0]
+        graph["label"] = graph_label[0]
 
         graphs.append(graph)
         node_labels.update(set(labels))
@@ -142,7 +137,7 @@ def compare_conditions(
     edge_weights = np.array([])
 
     for g in graphs:
-        edge_weights = np.append(edge_weights, g.es['weight'])
+        edge_weights = np.append(edge_weights, g.es["weight"])
 
     # Sort the edge weight array
     sorted_array = np.sort(edge_weights)
@@ -156,10 +151,7 @@ def compare_conditions(
     threshold_vals = thresholds[1:]
 
     print("Creating filtration curves...")
-    filtration_curves = _create_filtration_curves(
-        graphs,
-        threshold_vals=threshold_vals
-    )
+    filtration_curves = _create_filtration_curves(graphs, threshold_vals=threshold_vals)
 
     print("Done!")
     adata.uns["filtration_curves"] = {}
@@ -214,8 +206,8 @@ def _compute_edge_weights(gene_expression_matrix, adjacency_matrix):
 
 
 def _create_filtration_curves(
-        graphs,
-        threshold_vals,
+    graphs,
+    threshold_vals,
 ):
     """
     Creates the node label filtration curves.
@@ -245,23 +237,13 @@ def _create_filtration_curves(
 
     # Get all potential node labels to make sure that the distribution
     # can be calculated correctly later on.
-    node_labels = sorted(set(
-        itertools.chain.from_iterable(graph.vs['label'] for graph in graphs)
-    ))
+    node_labels = sorted(set(itertools.chain.from_iterable(graph.vs["label"] for graph in graphs)))
 
-    label_to_index = {
-        label: index for index, label in enumerate(sorted(node_labels))
-    }
+    label_to_index = {label: index for index, label in enumerate(sorted(node_labels))}
 
     # Build the filtration using the edge weights
     filtrated_graphs = [
-        _filtration_by_edge_attribute(
-            graph,
-            threshold_vals,
-            attribute='weight',
-            delete_nodes=True,
-            stop_early=True
-        )
+        _filtration_by_edge_attribute(graph, threshold_vals, attribute="weight", delete_nodes=True, stop_early=True)
         for graph in tqdm(graphs)
     ]
 
@@ -271,26 +253,14 @@ def _create_filtration_curves(
     list_of_df = []
 
     for index, filtrated_graph in enumerate(tqdm(filtrated_graphs)):
-
-        columns = ['graph_label', 'weight'] + node_labels
+        columns = ["graph_label", "weight"] + node_labels
         rows = []
 
-        distributions = _node_label_distribution(
-            filtrated_graph,
-            label_to_index
-        )
+        distributions = _node_label_distribution(filtrated_graph, label_to_index)
 
         for weight, counts in distributions:
-            row = {
-                'graph_label': graphs[index]['label'],
-                'weight': weight
-            }
-            row.update(
-                {
-                    str(node_label): count
-                    for node_label, count in zip(node_labels, counts)
-                }
-            )
+            row = {"graph_label": graphs[index]["label"], "weight": weight}
+            row.update({str(node_label): count for node_label, count in zip(node_labels, counts)})
             rows.append(row)
 
         df = pd.DataFrame(rows, columns=columns)
@@ -328,7 +298,7 @@ def _node_label_distribution(filtration, label_to_index):
     D = []
 
     for weight, graph in filtration:
-        labels = graph.vs['label']
+        labels = graph.vs["label"]
         counts = np.zeros(len(label_to_index))
 
         for label in labels:
@@ -342,13 +312,7 @@ def _node_label_distribution(filtration, label_to_index):
     return D
 
 
-def _filtration_by_edge_attribute(
-        graph,
-        threshold_vals,
-        attribute='weight',
-        delete_nodes=False,
-        stop_early=False
-):
+def _filtration_by_edge_attribute(graph, threshold_vals, attribute="weight", delete_nodes=False, stop_early=False):
     """
     Calculates a filtration of a graph based on an edge attribute of the graph.
     This function is based on code for the KDD 2021 paper 'Filtration Curves
@@ -395,7 +359,6 @@ def _filtration_by_edge_attribute(
         x = True
 
     for weight in sorted(np.unique(threshold_vals)):
-
         if x:
             weight = weight[0]
         edges = graph.es.select(lambda edge: edge[attribute] <= weight)

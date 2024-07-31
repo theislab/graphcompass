@@ -1,45 +1,28 @@
-import itertools
-import numpy as np
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-
-import scanpy as sc
-import squidpy as sq
-
-
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
+import matplotlib.pyplot as plt
+import squidpy as sq
 from anndata import AnnData
 from matplotlib.axes import Axes
-from matplotlib.colors import Colormap
-from matplotlib.figure import Figure
-
-from tqdm import tqdm
-from graphcompass.tl._distance import compare_groups
-
-from typing import Any, Callable, List, Mapping, Optional, Sequence, Tuple, Union
-
-
 
 # plot graphs for specific cell types in specific library_key
+
 
 def graphs_of_cells(
     adata: AnnData,
     library_key: str,
     cluster_key: str,
-
-    samples: Union[List[str], str] = None,
-    cell_type: Union[List[str], str] = None,
-
+    samples: list[str] | str = None,
+    cell_type: list[str] | str = None,
     connectivity_key: str = "spatial_connectivities",
-
     return_ax: bool = False,
-    figsize: Union[Tuple[float, float], None] = (7,30),
-    dpi: Union[int, None] = 300,
-    save: Union[str, Path, None] = None,
-    **kwargs: Any
-) -> Union[Axes, Sequence[Axes], None]:
+    figsize: tuple[float, float] | None = (7, 30),
+    dpi: int | None = 300,
+    save: str | Path | None = None,
+    **kwargs: Any,
+) -> Axes | Sequence[Axes] | None:
     """
     Plot group comparison for each cell type.
 
@@ -71,31 +54,29 @@ def graphs_of_cells(
         Keyword arguments to be passed to plotting functions.
     """
 
-    if samples is None: 
+    if samples is None:
         samples = adata.obs[library_key].unique()
     if cell_type is None:
         cell_type = adata.obs[cluster_key].unique()
 
-    ncols=1
-    nrows=len(samples)
+    ncols = 1
+    nrows = len(samples)
     fig, axs = plt.subplots(nrows, ncols, figsize=figsize, dpi=dpi)
 
     for i, sample in enumerate(samples):
-        
         adata_sample = adata[adata.obs[library_key] == sample]
         adata_sample = adata_sample[adata_sample.obs[cluster_key].isin(cell_type)]
-        
-        
+
         sq.pl.spatial_scatter(
-                adata_sample,
-                library_key=library_key,
-                library_id=sample,
-                connectivity_key=connectivity_key,
-                color=cluster_key,
-                shape=None,
-                ax=axs[i],
-                size=10,
-            )
+            adata_sample,
+            library_key=library_key,
+            library_id=sample,
+            connectivity_key=connectivity_key,
+            color=cluster_key,
+            shape=None,
+            ax=axs[i],
+            size=10,
+        )
         axs[i].set_title(sample)
 
     plt.tight_layout()
@@ -103,7 +84,6 @@ def graphs_of_cells(
         plt.savefig(save, dpi=dpi)
 
     if return_ax:
-        return axs  
+        return axs
     else:
         plt.show()
-    

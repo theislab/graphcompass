@@ -2,19 +2,16 @@
 
 from __future__ import annotations
 
-import squidpy as sq
-
 from typing import (
+    TYPE_CHECKING,
     Union,  # noqa: F401
 )
 
 import igraph
-from joblib import delayed, Parallel
+import squidpy as sq
 
-
-from numba import njit, prange  # noqa: F401
-
-from anndata import AnnData
+if TYPE_CHECKING:
+    from anndata import AnnData
 
 
 def _calculate_graph(
@@ -47,18 +44,12 @@ def _calculate_graph(
         - :attr:`anndata.AnnData.uns` ``['{cluster_key}_{library_key}_nhood_enrichment'][sample['count']`` - the enrichment count.
     """
     # calculate spatial neighbors for all samples
-    sq.gr.spatial_neighbors(
-        adata=adata, 
-        library_key=library_key, 
-        **kwargs_spatial_neighbors
-    )
-    nhood_enrichment = dict()
+    sq.gr.spatial_neighbors(adata=adata, library_key=library_key, **kwargs_spatial_neighbors)
+    nhood_enrichment = {}
     # calculate neighborhood graphs per sample
     for sample in adata.obs[library_key].unique():
         adata_sample = adata[adata.obs[library_key] == sample].copy()
-        sq.gr.nhood_enrichment(
-            adata_sample, cluster_key=cluster_key, **kwargs_nhood_enrich
-        )
+        sq.gr.nhood_enrichment(adata_sample, cluster_key=cluster_key, show_progress_bar=False, **kwargs_nhood_enrich)
         nhood_enrichment[sample] = adata_sample.uns[f"{cluster_key}_nhood_enrichment"]
 
     adata.uns[f"{cluster_key}_{library_key}_nhood_enrichment"] = nhood_enrichment
@@ -66,7 +57,6 @@ def _calculate_graph(
     if copy:
         return adata
     return
-
 
 
 def _get_graph(
@@ -98,22 +88,19 @@ def _get_graph(
     """
     adata_sample = adata[adata.obs[library_key] == sample].copy()
 
-    nhood_enrichment = adata_sample.uns[
-        f"{cluster_key}_{library_key}_nhood_enrichment"
-    ][sample]
+    nhood_enrichment = adata_sample.uns[f"{cluster_key}_{library_key}_nhood_enrichment"][sample]
 
     adata_sample_ct = adata_sample[adata_sample.obs[cluster_key] == cell_type].copy()
-    nhood_enrichment["spatial_connectivities"] = adata_sample_ct.obsp[
-        "spatial_connectivities"
-    ]
+    nhood_enrichment["spatial_connectivities"] = adata_sample_ct.obsp["spatial_connectivities"]
 
     return nhood_enrichment
 
+
 def _get_igraph(
-        adata, 
-        connectivity_key: str ="spatial_connectivities",
-        cluster_key: str = None,
-    ) -> igraph.Graph:
+    adata,
+    connectivity_key: str = "spatial_connectivities",
+    cluster_key: str = None,
+) -> igraph.Graph:
     """
     Calculate iGraph object for a specific sample
 
@@ -124,18 +111,18 @@ def _get_igraph(
     connectivity_key
         key for adjacency matrix
     cluster_key
-        Key in :attr:`anndata.AnnData.obs` where clustering is stored. 
+        Key in :attr:`anndata.AnnData.obs` where clustering is stored.
     Returns
     -------
-    iGraph object 
+    iGraph object
     """
-    
+
     A = adata.obsp[connectivity_key].toarray()
 
     g = igraph.Graph.Adjacency((A > 0).tolist())
 
-    g.es['weight'] = A[A.nonzero()]
+    g.es["weight"] = A[A.nonzero()]
     if cluster_key:
-        g.vs['label'] = adata.obs[cluster_key] 
+        g.vs["label"] = adata.obs[cluster_key]
 
     return g

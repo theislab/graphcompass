@@ -4,43 +4,47 @@ GraphCompass (**Graph** **Comp**arison Tools for Differential **A**nalyses in **
 It is developed on top on [`Squidpy`](https://github.com/scverse/squidpy/) and [`AnnData`](https://github.com/scverse/anndata).
 
 ## Features
-GraphCompass provides differential analysis methods to study spatial organization across conditions at three levels of abstraction: 
+
+GraphCompass provides differential analysis methods to study spatial organization across conditions at three levels of abstraction:
+
 1. Cell-type-specific subgraphs:
 
    i. Portrait method,
 
    ii. Diffusion method.
-3. Cellular neighborhoods:
+
+2. Cellular neighborhoods:
 
    i. GLMs for neighborhood enrichment analysis.
-4. Entire graphs:
+
+3. Entire graphs:
 
    i. Wasserstein WL kernel,
 
    ii. Filtration curves.
 
-Tutorials for the different methods can be found in the `notebooks` folder. 
-
+Tutorials for the different methods can be found in the `notebooks` folder.
 
 ## Requirements
+
 You will find all the necessary dependencies in the `pyproject.toml` file. Dependencies are automatically installed when you install GraphCompass.
 
 ## Installation
+
 You can install _GraphCompass_ via [pip] from [PyPI](https://pypi.org/project/graphcompass/).
- ```console
+
+```console
 $ pip install graphcompass
 ```
 
 or
 you can install _GraphCompass_ by cloning the repository and running:
+
 ```console
 $ pip install -e .
 ```
 
- 
-
 ## Usage
-
 
 ## Contributing
 
@@ -70,4 +74,5 @@ This project was generated from [@cjolowicz]'s [Hypermodern Python Cookiecutter]
 <!-- github-only -->
 
 [license]: https://github.com/theislab/graphcompass/blob/main/LICENSE
+
 [COMING SOON] [contributor guide]: https://github.com/theislab/graphcompass/blob/main/CONTRIBUTING.md
