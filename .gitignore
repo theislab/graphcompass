@@ -1,6 +1,9 @@
 # MacOS files
 **/.DS_Store
 
+#packaging files
+/src/**/_version.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
