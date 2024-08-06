@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 
 from typing import (
-    Union,  # noqa: F401
+    Optional, Union,  # noqa: F401
 )
 
 from joblib import delayed, Parallel
@@ -42,12 +42,12 @@ def compare_conditions(
     contrasts: list = None,
     cell_types: list = None,
     method: str = "portrait",
-    portrait_flavour: str = "python",
+    portrait_flavour: Optional[str] = "python",
+    max_depth: Optional[int] = 500,
     compute_spatial_graphs: bool = True,
-    kwargs_nhood_enrich={},
-    kwargs_spatial_neighbors={},
+    kwargs_nhood_enrich = {},
+    kwargs_spatial_neighbors = {},
     copy: bool = False,
-
     **kwargs,
 ) -> AnnData:
     # 1. calculate graph 
@@ -71,9 +71,11 @@ def compare_conditions(
     contrasts
         List of tuples or lists defining which sample groups to compare.
     method
-        Indicates whether to use network portrait divergence (method = 'portrait') or diffusion (method = 'diffusion').
+        Whether to use network portrait divergence (method = 'portrait') or diffusion (method = 'diffusion').
     portrait_flavour
-        Indicates whether to use the Python or C++ implementation of network portrait divergence when method is 'portrait'.
+        Whether to use the Python or C++ implementation of network portrait divergence when method is 'portrait'.
+    max_depth
+        Depth limit of the breadth-first search when method is 'portrait'.
     compute_spatial_graphs
         Set to False if spatial graphs have been calculated or `sq.gr.spatial_neighbors` has already been run before.
     kwargs_nhood_enrich
@@ -109,7 +111,13 @@ def compare_conditions(
     # calculate graph distances
     print("Computing graph similarities...")
     pairwise_similarities = _calculate_graph_distances(
-        adata, library_key=library_key, cluster_key=cluster_key, cell_types=cell_types, method=method, portrait_flavour=portrait_flavour
+        adata,
+        library_key=library_key,
+        cluster_key=cluster_key,
+        cell_types=cell_types,
+        method=method,
+        portrait_flavour=portrait_flavour,
+        max_depth=max_depth
     )
     
     # insert pairwise similarities into adata
@@ -127,8 +135,8 @@ def _calculate_graph_distances(
     cell_types: list = None,
     n_cell_types_per_graph: int = 1,
     method: str = "portrait",
-    portrait_flavour: str = "python",
-    min_cells: int = 10,
+    portrait_flavour: Optional[str] = "python",
+    max_depth: Optional[int] = 500
 ) -> pd.DataFrame:
     
     if not isinstance(adata, AnnData):
@@ -162,10 +170,11 @@ def _calculate_graph_distances(
                 sample_a=sample_a, 
                 sample_b=sample_b, 
                 cell_type=cell_type,
-                method=method,
-                min_cells=min_cells,
                 library_key=library_key,
                 cluster_key=cluster_key,
+                method=method,
+                portrait_flavour=portrait_flavour,
+                max_depth=max_depth
             )
             for sample_a, sample_b in itertools.combinations(samples, 2)
         )
@@ -184,10 +193,11 @@ def _calculate_graph_distance(
     sample_a: str,
     sample_b: str,
     cell_type: Union[str, list], # can be one cell type or list of cell types
-    library_key: str = "sample",
-    cluster_key: str = "cell_type",
-    method: str = "portrait",
-    min_cells: int = 10,
+    library_key: str,
+    cluster_key: str,
+    method: str,
+    portrait_flavour: Optional[str] = "python",
+    max_depth: Optional[int] = 500
 ) -> tuple[str, str, float, str]:
     """
     Calculates the similarity between two neighborhood graphs, taking into account graph emptiness and cell density.
@@ -224,9 +234,9 @@ def _calculate_graph_distance(
         # Handle empty graph case; e.g., assign maximum dissimilarity
         return (sample_a, sample_b, cell_type, ncells_a, ncells_b, density_a, density_b, 1.0 if graph_a.size != graph_b.size else 0.0)
     
-    similarity_score = compare_graphs(graph_a, graph_b, method)
+    similarity_score = compare_graphs(graph_a, graph_b, method, portrait_flavour, max_depth)
 
-    return (sample_a, sample_b, cell_type, ncells_a, ncells_b, density_a, density_b, similarity_score)# adjusted_similarity_score)
+    return (sample_a, sample_b, cell_type, ncells_a, ncells_b, density_a, density_b, similarity_score)
 
 
 def _calculate_graph_density(graph: Union[nx.Graph, scipy.sparse._csr.csr_matrix]) -> float:
@@ -250,7 +260,10 @@ def _calculate_graph_density(graph: Union[nx.Graph, scipy.sparse._csr.csr_matrix
 
 def compare_graphs(graph_a: Union[nx.Graph, scipy.sparse._csr.csr_matrix], 
                    graph_b: Union[nx.Graph, scipy.sparse._csr.csr_matrix],
-                   method: str, portrait_flavour: str = "python") -> float: 
+                   method: str,
+                   portrait_flavour: Optional[str] = "python",
+                   max_depth: Optional[int] = 500
+) -> float:
     """
     Calculates the similarity between two neighborhood graphs.
 
@@ -261,9 +274,11 @@ def compare_graphs(graph_a: Union[nx.Graph, scipy.sparse._csr.csr_matrix],
     graph_b
         Second squidpy-computed neighborhood graph.
     method (str)
-        Indicates whether to use network portrait divergence (method = 'portrait') or diffusion (method = 'diffusion').
+        Whether to use network portrait divergence (method = 'portrait') or diffusion (method = 'diffusion').
     portrait_flavour (str)
-        Indicates whether to use the Python or C++ implementation of network portrait divergence when method is 'portrait'.
+        Whether to use the Python or C++ implementation of network portrait divergence when method is 'portrait'.
+    max_depth (int)
+        Depth limit of the breadth-first search when method is 'portrait'.
     Returns
     -------
     If 'method' is portrait, a single float is returned. If graphs are identical, 0 is returned. If graphs are maximally different, 1 is returned.
@@ -283,7 +298,7 @@ def compare_graphs(graph_a: Union[nx.Graph, scipy.sparse._csr.csr_matrix],
         if isinstance(graph_b, scipy.sparse._csr.csr_matrix):
             graph_b = nx.from_scipy_sparse_array(graph_b)
 
-        similarity_score = _calculate_portrait_divergence(graph_a, graph_b)
+        similarity_score = _calculate_portrait_divergence(graph_a, graph_b, portrait_flavour, max_depth)
 
         return similarity_score
 
@@ -300,7 +315,7 @@ def compare_groups(
     pairwise_similarities: pd.DataFrame,
     sample_to_contrasts: pd.DataFrame,
     contrasts: list,
-    output_format: str = "tidy",
+    output_format: str = "tidy"
 ) -> Union[pd.DataFrame, dict]:
     """
     Extracts the similarities between two contrasted groups of samples.
@@ -386,7 +401,7 @@ def compare_groups(
 
 
 def _diffusion_featurization(
-    adjacency_matrix: Union[np.ndarray, scipy.sparse._csr.csr_matrix],
+    adjacency_matrix: Union[np.ndarray, scipy.sparse._csr.csr_matrix]
 ):
     """
     Computes a vector describing a graph using NetSLD (arXiv:1805.1071), given that graph's adjacency matrix.
@@ -433,25 +448,29 @@ def _pad_portraits_to_same_size(
 
 
 def _graph_or_portrait(
-        X: Union[nx.Graph, nx.DiGraph, scipy.sparse._csr.csr_matrix]
+        X: Union[nx.Graph, nx.DiGraph, scipy.sparse._csr.csr_matrix],
+        portrait_flavour: str,
+        max_depth: int
 ) -> Union[nx.Graph, nx.DiGraph, scipy.sparse._csr.csr_matrix]:
     """
     Checks if X is a nx (di)graph. Obtains its portrait if it is.
     Assumes it's a portrait otherwise and returns it.
     """
     if isinstance(X, (nx.Graph, nx.DiGraph)):
-        return _calculate_portrait(X)
+        return _calculate_portrait(X, portrait_flavour, max_depth)
     return X
 
 
 def _calculate_portrait_divergence(
     G: Union[nx.Graph, scipy.sparse._csr.csr_matrix],
-    H: Union[nx.Graph, scipy.sparse._csr.csr_matrix]
+    H: Union[nx.Graph, scipy.sparse._csr.csr_matrix],
+    portrait_flavour: str,
+    max_depth: int
 ) -> float:
     """Computes the network portrait divergence between graphs G and H."""
 
-    BG = _graph_or_portrait(G)
-    BH = _graph_or_portrait(H)
+    BG = _graph_or_portrait(G, portrait_flavour, max_depth)
+    BH = _graph_or_portrait(H, portrait_flavour, max_depth)
     BG, BH = _pad_portraits_to_same_size(BG, BH)
 
     L, K = BG.shape
@@ -477,23 +496,24 @@ def _calculate_portrait_divergence(
 @inject_docs(tl="graphcompass.tl")
 def _calculate_portrait(
         graph: Union[nx.Graph, nx.DiGraph],
-        method: str = "python", 
+        portrait_flavour: str,
+        max_depth: int,
         fname=None, 
         keepfile=False
 ) -> np.ndarray:
 
     """
-    Computes and generates portrait of graph using compiled B_matrix
+    Computes and generates the portrait of a graph using the compiled B_matrix
     executable.
 
     Unoptimised; source: https://github.com/bagrow/network-portrait-divergence/blob/72993c368114c2e834142787579466d673232fa4/portrait_divergence.py
 
     """
 
-    if method not in ["python", "cpp"]:
-        raise ValueError("Parameter 'method' must be either 'python' or 'cpp'.")
+    if portrait_flavour not in ["python", "cpp"]:
+        raise ValueError("Parameter 'portrait_flavour' must be either 'python' or 'cpp'.")
 
-    if method == "cpp":
+    if portrait_flavour == "cpp":
         # file to save to:
         f = fname
         if fname is None:
@@ -514,19 +534,19 @@ def _calculate_portrait(
             os.remove(f + ".edgelist")
             os.remove(f + ".Bmat")
 
-    elif method == "python":
-        dia = 500  # nx.diameter(graph)
+    elif portrait_flavour == "python":
         N = graph.number_of_nodes()
         # B indices are 0...dia x 0...N-1:
-        B = np.zeros((dia + 1, N))
+        B = np.zeros((max_depth + 1, N))
 
         max_path = 1
         adj = graph.adj
+        # breadth-first search (BFS) for each node
         for starting_node in graph.nodes():
             nodes_visited = {starting_node: 0}
             search_queue = [starting_node]
             d = 1
-            while search_queue:
+            while search_queue and d <= max_depth:
                 next_depth = []
                 extend = next_depth.extend
                 for n in search_queue:
@@ -548,12 +568,13 @@ def _calculate_portrait(
             dict_distribution = dict.fromkeys(node_distances, 0)
             for d in node_distances:
                 dict_distribution[d] += 1
+
             # add individual distribution to matrix:
             for shell, count in dict_distribution.items():
                 B[shell][count] += 1
 
             # HACK: count starting nodes that have zero nodes in farther shells
-            max_shell = dia
+            max_shell = max_depth
             while max_shell > max_node_distances:
                 B[max_shell][0] += 1
                 max_shell -= 1
