@@ -8,7 +8,7 @@ import scipy
 from tqdm import tqdm
 from anndata import AnnData
 from graphcompass.tl.utils import _calculate_graph, _get_igraph
-from wwl import wwl, pairwise_wasserstein_distance
+from graphcompass.imports.wwl_package import wwl, pairwise_wasserstein_distance 
 
 
 def compare_conditions(
@@ -48,7 +48,6 @@ def compare_conditions(
     copy
         Whether to return a copy of the Wasserstein distance object.
     """
-    
     if compute_spatial_graphs:
         print("Computing spatial graphs...")
         _calculate_graph(
