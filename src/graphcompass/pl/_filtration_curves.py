@@ -120,13 +120,6 @@ def compare_conditions(
             right
         )
 
-    print(type(axes))
-    print(type(i))
-    print(type(key))
-    print(type(average_df))
-    print(type(category_color_map))
-    print(type(threshold_vals))
-
     plt.tight_layout()
     if save is not None:
         plt.savefig(save, dpi=dpi)
@@ -142,7 +135,7 @@ def modify_plot(
         key: str,
         average_df: pd.DataFrame,
         category_color_map: dict,
-        threshold_vals: list,
+        threshold_vals: np.ndarray,
         is_single_axis: bool = False,
         right: Union[int, float, None] = None
     ):
