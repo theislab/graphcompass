@@ -39,7 +39,9 @@ $ pip install -e .
 
  
 
-## Usage
+## Citation
+
+Mayar Ali, Merel Kuijs, Soroor Hediyeh-zadeh, Tim Treis, Karin Hrovatin, Giovanni Palla, Anna C Schaar, Fabian J Theis, GraphCompass: spatial metrics for differential analyses of cell organization across conditions, *Bioinformatics*, Volume 40, Issue Supplement\_1, July 2024, Pages i548–i557, https://doi.org/10.1093/bioinformatics/btae242
 
 
 ## Contributing
