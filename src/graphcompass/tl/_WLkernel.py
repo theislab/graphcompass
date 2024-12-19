@@ -109,7 +109,6 @@ def compare_conditions(
             node_features.append(np.array(features))
 
         node_features = np.array(node_features, dtype=object)
-        print("Computing Wasserstein distance between conditions...")
         wasserstein_distance = pairwise_wasserstein_distance(graphs, node_features=node_features, num_iterations=num_iterations)
         adata.uns["wl_kernel"]["wasserstein_distance"] = pd.DataFrame(wasserstein_distance, columns=samples, index=samples)
 

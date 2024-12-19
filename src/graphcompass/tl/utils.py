@@ -129,13 +129,16 @@ def _get_igraph(
     -------
     iGraph object 
     """
-    
-    A = adata.obsp[connectivity_key].toarray()
+    from scipy.sparse import coo_matrix
 
-    g = igraph.Graph.Adjacency((A > 0).tolist())
+    A = adata.obsp[connectivity_key]  # Keep as sparse matrix
+    A_coo = coo_matrix(A)
 
-    g.es['weight'] = A[A.nonzero()]
+    # Create edges directly from the sparse representation
+    g = igraph.Graph(edges=list(zip(A_coo.row, A_coo.col)), directed=False)
+    g.es['weight'] = A_coo.data
+
     if cluster_key:
-        g.vs['label'] = adata.obs[cluster_key] 
+        g.vs['label'] = adata.obs[cluster_key].to_list()
 
     return g
