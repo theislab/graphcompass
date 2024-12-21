@@ -18,6 +18,9 @@ import os
 import copy
 from collections import defaultdict
 from typing import List
+from tqdm import tqdm
+from scipy.sparse import csr_matrix, diags
+
 
 ####################
 # Weisfeiler-Lehman
@@ -149,11 +152,11 @@ class ContinuousWeisfeilerLehman(TransformerMixin):
             if not 'label' in graph.vs.attribute_names():
                 graph.vs['label'] = list(map(str, [l for l in graph.vs.degree()]))    
             # Get features and adjacency matrix
-            node_features_cur = graph.vs['label']
-            adj_mat_cur = np.asarray(graph.get_adjacency().data)
+            node_features_cur = np.asarray(graph.vs['label']).astype(float).reshape(-1, 1)
+            adj_mat_cur = csr_matrix(graph.get_adjacency_sparse())
             # Load features
-            node_features.append(np.asarray(node_features_cur).astype(float).reshape(-1,1))
-            adj_mat.append(adj_mat_cur.astype(int))
+            node_features.append(node_features_cur)
+            adj_mat.append(adj_mat_cur)
             n_nodes.append(adj_mat_cur.shape[0])
 
         # By default, keep degree or label as features, if other features shall
@@ -165,18 +168,20 @@ class ContinuousWeisfeilerLehman(TransformerMixin):
 
         return node_features, adj_mat, n_nodes
 
-    def _create_adj_avg(self, adj_cur):
+    def _create_adj_avg(self, adj_cur: csr_matrix) -> csr_matrix:
         '''
-        create adjacency
+        Create adjacency matrix using sparse operations.
         '''
-        deg = np.sum(adj_cur, axis = 1)
-        deg = np.asarray(deg).reshape(-1)
+        deg = np.array(adj_cur.sum(axis=1)).flatten()
 
+        # Adjust degrees where needed
         deg[deg!=1] -= 1
 
-        deg = 1/deg
-        deg_mat = np.diag(deg)
-        adj_cur = adj_cur.dot(deg_mat.T).T
+        deg = 1 / deg
+        deg_mat = diags(deg)
+
+        # Normalize adjacency matrix
+        adj_cur = deg_mat @ adj_cur  # Sparse multiplication
         
         return adj_cur
 
@@ -185,31 +190,34 @@ class ContinuousWeisfeilerLehman(TransformerMixin):
         Transform a list of graphs into their node representations. 
         Node features should be provided as a numpy array.
         """
+        print("Embedding nodes; pre-processing...")
         node_features_labels, adj_mat, n_nodes = self._preprocess_graphs(X)
         if node_features is None:
             node_features = node_features_labels
 
+        print("Embedding nodes; feature scaling...")
         node_features_data = scale(np.concatenate(node_features, axis=0), axis = 0)
         splits_idx = np.cumsum(n_nodes).astype(int)
         node_features_split = np.vsplit(node_features_data,splits_idx)		
         node_features = node_features_split[:-1]
 
         # Generate the label sequences for h iterations
+        print("Embedding nodes; generating label sequences...")
         n_graphs = len(node_features)
         self._label_sequences = []
-        for i in range(n_graphs):
+        for i in tqdm(range(n_graphs)):
             graph_feat = []
 
             for it in range(num_iterations+1):
                 if it == 0:
                     graph_feat.append(node_features[i])
                 else:
-                    adj_cur = adj_mat[i]+np.identity(adj_mat[i].shape[0])
+                    adj_cur = adj_mat[i] + csr_matrix(np.identity(adj_mat[i].shape[0]))
                     adj_cur = self._create_adj_avg(adj_cur)
 
-                    np.fill_diagonal(adj_cur, 0)
-                    graph_feat_cur = 0.5*(np.dot(adj_cur, graph_feat[it-1]) + graph_feat[it-1])
+                    adj_cur.setdiag(0)
+                    graph_feat_cur = 0.5 * (adj_cur @ graph_feat[it-1] + graph_feat[it-1])
                     graph_feat.append(graph_feat_cur)
 
-            self._label_sequences.append(np.concatenate(graph_feat, axis = 1))
+            self._label_sequences.append(np.concatenate(graph_feat, axis=1))
         return self._label_sequences
