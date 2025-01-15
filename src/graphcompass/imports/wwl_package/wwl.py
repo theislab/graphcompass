@@ -8,6 +8,7 @@
 # -----------------------------------------------------------------------------
 import sys
 import logging
+from tqdm import tqdm
 
 import ot
 import numpy as np
@@ -36,16 +37,20 @@ def _compute_wasserstein_distance(label_sequences, sinkhorn=False,
     for graph_index_1, graph_1 in enumerate(label_sequences):
         # Only keep the embeddings for the first h iterations
         labels_1 = label_sequences[graph_index_1]
-        for graph_index_2, graph_2 in enumerate(label_sequences[graph_index_1:]):
+        for graph_index_2, graph_2 in tqdm(enumerate(label_sequences[graph_index_1:])):
             labels_2 = label_sequences[graph_index_2 + graph_index_1]
             # Get cost matrix
             ground_distance = 'hamming' if categorical else 'euclidean'
             costs = ot.dist(labels_1, labels_2, metric=ground_distance)
 
             if sinkhorn:
-                mat = ot.sinkhorn(np.ones(len(labels_1))/len(labels_1), 
-                                    np.ones(len(labels_2))/len(labels_2), costs, sinkhorn_lambda, 
-                                    numItermax=50)
+                mat = ot.sinkhorn(
+                    np.ones(len(labels_1))/len(labels_1),
+                    np.ones(len(labels_2))/len(labels_2),
+                    costs,
+                    sinkhorn_lambda,
+                    numItermax=50
+                )
                 M[graph_index_1, graph_index_2 + graph_index_1] = np.sum(np.multiply(mat, costs))
             else:
                 M[graph_index_1, graph_index_2 + graph_index_1] = \
@@ -90,6 +95,7 @@ def pairwise_wasserstein_distance(X, node_features = None, num_iterations=3, sin
         node_representations = es.fit_transform(X, node_features=node_features, num_iterations=num_iterations)
 
     # Compute the Wasserstein distance
+    print("Computing Wasserstein distance between conditions...")
     pairwise_distances = _compute_wasserstein_distance(node_representations, sinkhorn=sinkhorn, 
                                     categorical=categorical, sinkhorn_lambda=1e-2)
     return pairwise_distances
