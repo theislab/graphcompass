@@ -1,4 +1,11 @@
-######## This file is adapted from https://github.com/BorgwardtLab/WWL/blob/master/src/wwl/wwl.py ########
+"""
+Wasserstein Weisfeiler-Lehman (WWL) kernel implementation.
+
+This module provides tools for computing graph similarities using the Wasserstein 
+Weisfeiler-Lehman kernel, supporting both categorical and continuous graph embeddings.
+
+Adapted from: https://github.com/BorgwardtLab/WWL/blob/master/src/wwl/wwl.py
+"""
 
 import sys
 import logging
@@ -12,25 +19,29 @@ from .propagation_scheme import WeisfeilerLehman, ContinuousWeisfeilerLehman
 logging.basicConfig(level=logging.INFO)
 
 def logging_config(level='DEBUG'):
-    """Configure logging level.
+    """Set the logging level for the application.
+
+    Configures the global logging level to control the verbosity of log messages.
 
     Args:
-        level: Logging level (default: 'DEBUG')
+        level (str, optional): Logging level. Defaults to 'DEBUG'.
+            Typical values include 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'.
     """
     logging.basicConfig(level=logging.getLevelName(level.upper()))
 
 def _compute_wasserstein_distance_geomloss(label_sequences, blur=0.05, p=2):
     """Compute pairwise Wasserstein distances between graph node embeddings.
 
-    Uses GeomLoss, automatically selecting GPU if available.
+    Calculates the optimal transport distance between node embeddings using 
+    the Sinkhorn algorithm. Automatically uses GPU acceleration if available.
 
     Args:
-        label_sequences: Node embeddings for each graph
-        blur: Sinkhorn smoothing parameter
-        p: Cost function power (default: Euclidean squared)
+        label_sequences (list): List of node embeddings for each graph
+        blur (float, optional): Sinkhorn smoothing parameter. Defaults to 0.05.
+        p (int, optional): Power of the cost function. Defaults to 2 (squared Euclidean).
 
     Returns:
-        Pairwise distance matrix
+        numpy.ndarray: Symmetric matrix of pairwise Wasserstein distances
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     sinkhorn = SamplesLoss("sinkhorn", p=p, blur=blur)
@@ -57,11 +68,17 @@ def _compute_wasserstein_distance_geomloss(label_sequences, blur=0.05, p=2):
 def pairwise_wasserstein_distance(X, node_features=None, num_iterations=3, enforce_continuous=False):
     """Compute pairwise Wasserstein distances between graph embeddings.
 
+    Determines the appropriate embedding scheme (categorical or continuous) 
+    and computes the Wasserstein distances between graph representations.
+
     Args:
-        X: List of graphs
-        node_features: Node features for continuous graphs
-        num_iterations: Propagation scheme iterations
-        enforce_continuous: Force continuous embedding scheme
+        X (list): List of graphs to compare
+        node_features (array-like, optional): Pre-computed node features for continuous graphs
+        num_iterations (int, optional): Number of iterations for graph embedding. Defaults to 3.
+        enforce_continuous (bool, optional): Force use of continuous embedding scheme. Defaults to False.
+
+    Returns:
+        numpy.ndarray: Matrix of pairwise Wasserstein distances between graphs
     """
     # First check if the graphs are continuous vs categorical
     categorical = True
@@ -94,13 +111,19 @@ def pairwise_wasserstein_distance(X, node_features=None, num_iterations=3, enfor
     return pairwise_distances
 
 def wwl(X, node_features=None, num_iterations=3, gamma=None):
-    """Compute Wasserstein Weisfeiler-Lehman kernel for graph set.
+    """Compute the Wasserstein Weisfeiler-Lehman (WWL) kernel for a set of graphs.
+
+    Combines Wasserstein distance computation with a Laplacian kernel to 
+    measure graph similarities.
 
     Args:
-        X: List of graphs
-        node_features: Optional node features
-        num_iterations: Propagation scheme iterations
-        gamma: Laplacian kernel parameter
+        X (list): List of graphs to compare
+        node_features (array-like, optional): Pre-computed node features for continuous graphs
+        num_iterations (int, optional): Number of iterations for graph embedding. Defaults to 3.
+        gamma (float, optional): Scaling parameter for the Laplacian kernel. Defaults to None.
+
+    Returns:
+        numpy.ndarray: Kernel matrix representing graph similarities
     """
     D_W =  pairwise_wasserstein_distance(X, node_features = node_features, 
                                 num_iterations=num_iterations)
