@@ -19,7 +19,7 @@ import copy
 from collections import defaultdict
 from typing import List
 from tqdm import tqdm
-from scipy.sparse import csr_matrix, diags
+from scipy.sparse import csr_matrix, diags, eye
 
 
 ####################
@@ -212,7 +212,7 @@ class ContinuousWeisfeilerLehman(TransformerMixin):
                 if it == 0:
                     graph_feat.append(node_features[i])
                 else:
-                    adj_cur = adj_mat[i] + csr_matrix(np.identity(adj_mat[i].shape[0]))
+                    adj_cur = adj_mat[i] + eye(adj_mat[i].shape[0], format='csr')
                     adj_cur = self._create_adj_avg(adj_cur)
 
                     adj_cur.setdiag(0)
