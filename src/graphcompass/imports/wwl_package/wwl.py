@@ -83,19 +83,19 @@ def pairwise_wasserstein_distance(X, node_features=None, num_iterations=3, enfor
     # First check if the graphs are continuous vs categorical
     categorical = True
     if enforce_continuous:
-        logging.info('Enforce continous flag is on, using CONTINUOUS propagation scheme.')
+        logging.info('Continuous embedding enforced: Using continuous propagation scheme.')
         categorical = False
     elif node_features is not None:
-        logging.info('Continuous node features provided, using CONTINUOUS propagation scheme.')
+        logging.info('Continuous node features detected: Using continuous propagation scheme.')
         categorical = False
     else:
         for g in X:
-            if not 'label' in g.vs.attribute_names():
-                logging.info('No label attributed to graphs, use degree instead and use CONTINUOUS propagation scheme.')
+            if 'label' not in g.vs.attribute_names():
+                logging.info('No categorical labels found: Switching to continuous propagation scheme using node degrees.')
                 categorical = False
                 break
         if categorical:
-            logging.info('Categorically-labelled graphs, using CATEGORICAL propagation scheme.')
+            logging.info('Categorical graph labels detected: Using categorical propagation scheme.')
     
     # Embed the nodes
     if categorical:
@@ -106,7 +106,7 @@ def pairwise_wasserstein_distance(X, node_features=None, num_iterations=3, enfor
         node_representations = es.fit_transform(X, node_features=node_features, num_iterations=num_iterations)
 
     # Compute the Wasserstein distance
-    print("Computing Wasserstein distance between conditions...")
+    logging.info("Computing pairwise Wasserstein distances between graph embeddings...")
     pairwise_distances = _compute_wasserstein_distance_geomloss(node_representations)
     return pairwise_distances
 
