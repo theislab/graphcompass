@@ -1,4 +1,4 @@
-######## This file is copied from https://github.com/BorgwardtLab/WWL/blob/master/src/wwl/propagation_scheme.py ########
+######## This file is adapted from https://github.com/BorgwardtLab/WWL/blob/master/src/wwl/propagation_scheme.py ########
 
 # -----------------------------------------------------------------------------
 # This file contains the propagation schemes for categorically labeled and 
@@ -19,7 +19,7 @@ import copy
 from collections import defaultdict
 from typing import List
 from tqdm import tqdm
-from scipy.sparse import csr_matrix, diags
+from scipy.sparse import csr_matrix, diags, eye
 
 
 ####################
@@ -149,8 +149,14 @@ class ContinuousWeisfeilerLehman(TransformerMixin):
 
         # Iterate across graphs and load initial node features
         for graph in X:
-            if not 'label' in graph.vs.attribute_names():
-                graph.vs['label'] = list(map(str, [l for l in graph.vs.degree()]))    
+            if 'label' in graph.vs.attribute_names():                                                                                                                                 
+                labels = graph.vs['label']                                                                                                                                            
+                if not all(isinstance(label, (int, float)) for label in labels):
+                    logging.warning("Non-numeric labels found. Falling back to node degrees.")
+                    graph.vs['label'] = list(graph.vs.degree())
+            else:
+                graph.vs['label'] = list(graph.vs.degree())
+            
             # Get features and adjacency matrix
             node_features_cur = np.asarray(graph.vs['label']).astype(float).reshape(-1, 1)
             adj_mat_cur = csr_matrix(graph.get_adjacency_sparse())
@@ -212,7 +218,7 @@ class ContinuousWeisfeilerLehman(TransformerMixin):
                 if it == 0:
                     graph_feat.append(node_features[i])
                 else:
-                    adj_cur = adj_mat[i] + csr_matrix(np.identity(adj_mat[i].shape[0]))
+                    adj_cur = adj_mat[i] + eye(adj_mat[i].shape[0], format='csr')
                     adj_cur = self._create_adj_avg(adj_cur)
 
                     adj_cur.setdiag(0)
