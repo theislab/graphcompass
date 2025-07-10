@@ -12,23 +12,26 @@ from .propagation_scheme import WeisfeilerLehman, ContinuousWeisfeilerLehman
 logging.basicConfig(level=logging.INFO)
 
 def logging_config(level='DEBUG'):
-    level = logging.getLevelName(level.upper())
-    logging.basicConfig(level=level)
-    pass
-
-def _compute_wasserstein_distance_geomloss(label_sequences, categorical=False, blur=0.05, p=2):
-    """
-    Compute pairwise Wasserstein distances between graph node embeddings using GeomLoss.
-    Automatically uses GPU if available.
+    """Configure logging level.
 
     Args:
-        label_sequences: list of arrays (each array is [n_nodes, d] for a graph)
-        categorical: if True, assumes discrete labels; else assumes continuous node embeddings
-        blur: smoothing parameter for Sinkhorn (smaller = closer to EMD)
-        p: power for cost (usually 2 for Euclidean squared)
+        level: Logging level (default: 'DEBUG')
+    """
+    logging.basicConfig(level=logging.getLevelName(level.upper()))
+
+def _compute_wasserstein_distance_geomloss(label_sequences, categorical=False, blur=0.05, p=2):
+    """Compute pairwise Wasserstein distances between graph node embeddings.
+
+    Uses GeomLoss, automatically selecting GPU if available.
+
+    Args:
+        label_sequences: Node embeddings for each graph
+        categorical: Whether labels are discrete or continuous
+        blur: Sinkhorn smoothing parameter
+        p: Cost function power (default: Euclidean squared)
 
     Returns:
-        Distance matrix (n_graphs x n_graphs)
+        Pairwise distance matrix
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     sinkhorn = SamplesLoss("sinkhorn", p=p, blur=blur)
@@ -52,15 +55,15 @@ def _compute_wasserstein_distance_geomloss(label_sequences, categorical=False, b
 
     return M.cpu().numpy()
 
-def pairwise_wasserstein_distance(X, node_features = None, num_iterations=3, sinkhorn=False, enforce_continuous=False):
-    """
-    Pairwise computation of the Wasserstein distance between embeddings of the 
-    graphs in X.
-    args:
-        X (List[ig.graphs]): List of graphs
-        node_features (array): Array containing the node features for continuously attributed graphs
-        num_iterations (int): Number of iterations for the propagation scheme
-        sinkhorn (bool): Indicates whether sinkhorn approximation should be used
+def pairwise_wasserstein_distance(X, node_features=None, num_iterations=3, sinkhorn=False, enforce_continuous=False):
+    """Compute pairwise Wasserstein distances between graph embeddings.
+
+    Args:
+        X: List of graphs
+        node_features: Node features for continuous graphs
+        num_iterations: Propagation scheme iterations
+        sinkhorn: Use Sinkhorn approximation
+        enforce_continuous: Force continuous embedding scheme
     """
     # First check if the graphs are continuous vs categorical
     categorical = True
@@ -93,8 +96,14 @@ def pairwise_wasserstein_distance(X, node_features = None, num_iterations=3, sin
     return pairwise_distances
 
 def wwl(X, node_features=None, num_iterations=3, sinkhorn=False, gamma=None):
-    """
-    Pairwise computation of the Wasserstein Weisfeiler-Lehman kernel for graphs in X.
+    """Compute Wasserstein Weisfeiler-Lehman kernel for graph set.
+
+    Args:
+        X: List of graphs
+        node_features: Optional node features
+        num_iterations: Propagation scheme iterations
+        sinkhorn: Use Sinkhorn approximation
+        gamma: Laplacian kernel parameter
     """
     D_W =  pairwise_wasserstein_distance(X, node_features = node_features, 
                                 num_iterations=num_iterations, sinkhorn=sinkhorn)
