@@ -19,14 +19,13 @@ def logging_config(level='DEBUG'):
     """
     logging.basicConfig(level=logging.getLevelName(level.upper()))
 
-def _compute_wasserstein_distance_geomloss(label_sequences, categorical=False, blur=0.05, p=2):
+def _compute_wasserstein_distance_geomloss(label_sequences, blur=0.05, p=2):
     """Compute pairwise Wasserstein distances between graph node embeddings.
 
     Uses GeomLoss, automatically selecting GPU if available.
 
     Args:
         label_sequences: Node embeddings for each graph
-        categorical: Whether labels are discrete or continuous
         blur: Sinkhorn smoothing parameter
         p: Cost function power (default: Euclidean squared)
 
@@ -55,14 +54,13 @@ def _compute_wasserstein_distance_geomloss(label_sequences, categorical=False, b
 
     return M.cpu().numpy()
 
-def pairwise_wasserstein_distance(X, node_features=None, num_iterations=3, sinkhorn=False, enforce_continuous=False):
+def pairwise_wasserstein_distance(X, node_features=None, num_iterations=3, enforce_continuous=False):
     """Compute pairwise Wasserstein distances between graph embeddings.
 
     Args:
         X: List of graphs
         node_features: Node features for continuous graphs
         num_iterations: Propagation scheme iterations
-        sinkhorn: Use Sinkhorn approximation
         enforce_continuous: Force continuous embedding scheme
     """
     # First check if the graphs are continuous vs categorical
@@ -92,20 +90,19 @@ def pairwise_wasserstein_distance(X, node_features=None, num_iterations=3, sinkh
 
     # Compute the Wasserstein distance
     print("Computing Wasserstein distance between conditions...")
-    pairwise_distances = _compute_wasserstein_distance_geomloss(node_representations, categorical=categorical)
+    pairwise_distances = _compute_wasserstein_distance_geomloss(node_representations)
     return pairwise_distances
 
-def wwl(X, node_features=None, num_iterations=3, sinkhorn=False, gamma=None):
+def wwl(X, node_features=None, num_iterations=3, gamma=None):
     """Compute Wasserstein Weisfeiler-Lehman kernel for graph set.
 
     Args:
         X: List of graphs
         node_features: Optional node features
         num_iterations: Propagation scheme iterations
-        sinkhorn: Use Sinkhorn approximation
         gamma: Laplacian kernel parameter
     """
     D_W =  pairwise_wasserstein_distance(X, node_features = node_features, 
-                                num_iterations=num_iterations, sinkhorn=sinkhorn)
+                                num_iterations=num_iterations)
     wwl = laplacian_kernel(D_W, gamma=gamma)
     return wwl
