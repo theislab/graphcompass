@@ -8,14 +8,14 @@ import scipy
 from tqdm import tqdm
 from anndata import AnnData
 from graphcompass.tl.utils import _calculate_graph, _get_igraph
-from graphcompass.imports.wwl_package import wwl, pairwise_wasserstein_distance 
+from graphcompass.imports.wwl_package import pairwise_wasserstein_distance 
 
 
 def compare_conditions(
     adata: AnnData,
     library_key: str = "sample",
     cluster_key: str = "cell_type",
-    cell_type_keys: list = None,
+    cell_type_key: str = None,
     compute_spatial_graphs: bool = True,
     num_iterations: int = 3,
     kwargs_nhood_enrich={},
@@ -35,8 +35,8 @@ def compare_conditions(
         which stores mapping between ``library_id`` and obs.
     cluster_key
         Key in :attr:`anndata.AnnData.obs` where clustering is stored.
-    cell_type_keys
-        List of keys in :attr:`anndata.AnnData.obs` where cell types are stored.
+    cell_type_key
+        Key in :attr:`anndata.AnnData.obs` where cell types are stored.
     compute_spatial_graphs
         Set to False if spatial graphs have been calculated or `sq.gr.spatial_neighbors` has already been run before.
     kwargs_nhood_enrich
@@ -49,7 +49,7 @@ def compare_conditions(
         Whether to return a copy of the Wasserstein distance object.
     """
     if compute_spatial_graphs:
-        print("Computing spatial graphs...")
+        logging.info("Computing spatial graphs...")
         _calculate_graph(
                 adata=adata,
                 library_key=library_key,
@@ -59,42 +59,31 @@ def compare_conditions(
                 **kwargs
         )
     else:
-        print("Spatial graphs were previously computed. Skipping computing spatial graphs...")
+        logging.info("Spatial graphs were previously computed. Skipping computing spatial graphs...")
 
     samples = adata.obs[library_key].unique()
     
     graphs = []
     node_features = []
-    cell_types = []
 
     adata.uns["wl_kernel"] = {}
-    adata.uns["wl_kernel"] = {}
-    if cell_type_keys is not None:
-        for cell_type_key in cell_type_keys:
-            graphs = []
-            node_features = []
-            status = []
-            cell_types = []
-            adata.uns["wl_kernel"] = {}
-            adata.uns["wl_kernel"] = {}
-
-            adata.uns["wl_kernel"][cell_type_key] = {}
-            adata.uns["wl_kernel"][cell_type_key] = {}
-            for sample in samples:
-                adata_sample = adata[adata.obs[library_key] == sample]
-                status.append(adata_sample.obs[library_key][0])
-                graphs.append(_get_igraph(adata_sample, cluster_key=None))
-                
-                node_features.append(np.array(adata_sample.obs[cell_type_key].values))
-                cell_types.append(np.full(len(adata_sample.obs[cell_type_key]), cell_type_key))
-            
-            node_features = np.array(node_features, dtype=object)
-            
-            wasserstein_distance = pairwise_wasserstein_distance(graphs, node_features=node_features, num_iterations=num_iterations)
-            adata.uns["wl_kernel"][cell_type_key]["wasserstein_distance"] = pd.DataFrame(wasserstein_distance, columns=samples, index=samples)
+    if cell_type_key is not None:
+        graphs = []
+        adata.uns["wl_kernel"][cell_type_key] = {}
+        for sample in samples:
+            adata_sample = adata[adata.obs[library_key] == sample]
+            g = _get_igraph(adata_sample, cluster_key=cell_type_key)
+            graphs.append(g)
+        
+        wasserstein_distance = pairwise_wasserstein_distance(
+            graphs,
+            node_features=None,   # triggers categorical WL
+            num_iterations=num_iterations
+        )
+        adata.uns["wl_kernel"][cell_type_key]["wasserstein_distance"] = pd.DataFrame(wasserstein_distance, columns=samples, index=samples)
                         
     else:
-        print("Defining node features...")
+        logging.info("Defining node features...")
         for sample in tqdm(samples):
             adata_sample = adata[adata.obs[library_key] == sample]
             graphs.append(
@@ -109,9 +98,13 @@ def compare_conditions(
             node_features.append(np.array(features))
 
         node_features = np.array(node_features, dtype=object)
-        wasserstein_distance = pairwise_wasserstein_distance(graphs, node_features=node_features, num_iterations=num_iterations)
+        wasserstein_distance = pairwise_wasserstein_distance(
+            graphs,
+            node_features=node_features,  # triggers continuous WL
+            num_iterations=num_iterations
+        )
         adata.uns["wl_kernel"]["wasserstein_distance"] = pd.DataFrame(wasserstein_distance, columns=samples, index=samples)
 
-    print("Done!")
+    logging.info("Done!")
     if copy:
         return wasserstein_distance

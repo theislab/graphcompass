@@ -10,8 +10,10 @@ Adapted from: https://github.com/BorgwardtLab/WWL/blob/master/src/wwl/wwl.py
 import sys
 import logging
 
+import numpy as np
 import torch
 from geomloss import SamplesLoss
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics.pairwise import laplacian_kernel
 
 from .propagation_scheme import WeisfeilerLehman, ContinuousWeisfeilerLehman
@@ -29,7 +31,7 @@ def logging_config(level='DEBUG'):
     """
     logging.basicConfig(level=logging.getLevelName(level.upper()))
 
-def _compute_wasserstein_distance_geomloss(label_sequences, blur=0.05, p=2):
+def _compute_wasserstein_distance_geomloss(label_sequences, categorical=False, blur=0.05, p=2):
     """Compute pairwise Wasserstein distances between graph node embeddings.
 
     Calculates the optimal transport distance between node embeddings using 
@@ -37,11 +39,21 @@ def _compute_wasserstein_distance_geomloss(label_sequences, blur=0.05, p=2):
 
     Args:
         label_sequences (list): List of node embeddings for each graph
+        categorical (bool): Whether the node labels are categorical (discrete) or continuous embeddings.
         blur (float, optional): Sinkhorn smoothing parameter. Defaults to 0.05.
         p (int, optional): Power of the cost function. Defaults to 2 (squared Euclidean).
 
     Returns:
         numpy.ndarray: Symmetric matrix of pairwise Wasserstein distances
+
+    Notes:
+        This function differs from the legacy implementation in that it leverages
+        the GeomLoss library for GPU-accelerated Sinkhorn computations, enabling 
+        efficient optimal transport calculations even on large graphs. The legacy
+        function uses the POT library and runs on CPU only, which can be slower 
+        for large datasets. Additionally, this function handles both categorical
+        and continuous node features in a unified manner via one-hot encoding 
+        for discrete labels.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     sinkhorn = SamplesLoss("sinkhorn", p=p, blur=blur)
@@ -49,17 +61,25 @@ def _compute_wasserstein_distance_geomloss(label_sequences, blur=0.05, p=2):
     n = len(label_sequences)
     M = torch.zeros((n, n), device=device)
 
-    for i, emb_i in enumerate(label_sequences):
-        x_i = torch.tensor(emb_i, dtype=torch.float32, device=device)
+    if categorical:
+        # Flatten all labels for one-hot encoder fitting
+        all_labels = np.concatenate(label_sequences).reshape(-1, 1)
+        enc = OneHotEncoder(sparse_output=False, dtype=np.float32)
+        enc.fit(all_labels)
 
+        # Encode all graphs now for speed
+        encoded_sequences = [torch.tensor(enc.transform(seq.reshape(-1,1)), device=device) for seq in label_sequences]
+
+    else:
+        # Assume label_sequences are arrays of shape (n_nodes, features)
+        encoded_sequences = [torch.tensor(seq, dtype=torch.float32, device=device) for seq in label_sequences]
+
+    for i in range(n):
+        a = torch.ones(encoded_sequences[i].shape[0], device=device) / encoded_sequences[i].shape[0]
         for j in range(i, n):
-            x_j = torch.tensor(label_sequences[j], dtype=torch.float32, device=device)
+            b = torch.ones(encoded_sequences[j].shape[0], device=device) / encoded_sequences[j].shape[0]
 
-            # Uniform weights
-            a = torch.ones(x_i.shape[0], device=device) / x_i.shape[0]
-            b = torch.ones(x_j.shape[0], device=device) / x_j.shape[0]
-
-            dist = sinkhorn(a, x_i, b, x_j)
+            dist = sinkhorn(a, encoded_sequences[i], b, encoded_sequences[j])
             M[i, j] = dist
             M[j, i] = dist  # symmetric
 
@@ -90,12 +110,12 @@ def pairwise_wasserstein_distance(X, node_features=None, num_iterations=3, enfor
         categorical = False
     else:
         for g in X:
-            if 'label' not in g.vs.attribute_names():
-                logging.info('No categorical labels found: Switching to continuous propagation scheme using node degrees.')
+            if 'label' not in g.vs.attribute_names() or not all(isinstance(label, (int, float)) for label in g.vs['label']):
+                logging.info('Invalid categorical labels found: Switching to continuous propagation scheme using node degrees.')
                 categorical = False
                 break
         if categorical:
-            logging.info('Categorical graph labels detected: Using categorical propagation scheme.')
+            logging.info('Valid categorical graph labels detected: Using categorical propagation scheme.')
     
     # Embed the nodes
     if categorical:
@@ -107,7 +127,7 @@ def pairwise_wasserstein_distance(X, node_features=None, num_iterations=3, enfor
 
     # Compute the Wasserstein distance
     logging.info("Computing pairwise Wasserstein distances between graph embeddings...")
-    pairwise_distances = _compute_wasserstein_distance_geomloss(node_representations)
+    pairwise_distances = _compute_wasserstein_distance_geomloss(node_representations, categorical=categorical)
     return pairwise_distances
 
 def wwl(X, node_features=None, num_iterations=3, gamma=None):
