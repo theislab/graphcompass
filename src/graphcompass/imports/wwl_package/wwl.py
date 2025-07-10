@@ -1,17 +1,10 @@
-######## This file is copied from https://github.com/BorgwardtLab/WWL/blob/master/src/wwl/wwl.py ########
+######## This file is adapted from https://github.com/BorgwardtLab/WWL/blob/master/src/wwl/wwl.py ########
 
-
-# -----------------------------------------------------------------------------
-# This file contains the API for the WWL kernel computations
-#
-# December 2019, M. Togninalli
-# -----------------------------------------------------------------------------
 import sys
 import logging
-from tqdm import tqdm
 
-import ot
-import numpy as np
+import torch
+from geomloss import SamplesLoss
 from sklearn.metrics.pairwise import laplacian_kernel
 
 from .propagation_scheme import WeisfeilerLehman, ContinuousWeisfeilerLehman
@@ -23,41 +16,41 @@ def logging_config(level='DEBUG'):
     logging.basicConfig(level=level)
     pass
 
-def _compute_wasserstein_distance(label_sequences, sinkhorn=False, 
-                                    categorical=False, sinkhorn_lambda=1e-2):
-    '''
-    Generate the Wasserstein distance matrix for the graphs embedded 
-    in label_sequences
-    '''
-    # Get the iteration number from the embedding file
-    n = len(label_sequences)
-    
-    M = np.zeros((n,n))
-    # Iterate over pairs of graphs
-    for graph_index_1, graph_1 in enumerate(label_sequences):
-        # Only keep the embeddings for the first h iterations
-        labels_1 = label_sequences[graph_index_1]
-        for graph_index_2, graph_2 in tqdm(enumerate(label_sequences[graph_index_1:])):
-            labels_2 = label_sequences[graph_index_2 + graph_index_1]
-            # Get cost matrix
-            ground_distance = 'hamming' if categorical else 'euclidean'
-            costs = ot.dist(labels_1, labels_2, metric=ground_distance)
+def _compute_wasserstein_distance_geomloss(label_sequences, categorical=False, blur=0.05, p=2):
+    """
+    Compute pairwise Wasserstein distances between graph node embeddings using GeomLoss.
+    Automatically uses GPU if available.
 
-            if sinkhorn:
-                mat = ot.sinkhorn(
-                    np.ones(len(labels_1))/len(labels_1),
-                    np.ones(len(labels_2))/len(labels_2),
-                    costs,
-                    sinkhorn_lambda,
-                    numItermax=50
-                )
-                M[graph_index_1, graph_index_2 + graph_index_1] = np.sum(np.multiply(mat, costs))
-            else:
-                M[graph_index_1, graph_index_2 + graph_index_1] = \
-                    ot.emd2([], [], costs)
-                    
-    M = (M + M.T)
-    return M
+    Args:
+        label_sequences: list of arrays (each array is [n_nodes, d] for a graph)
+        categorical: if True, assumes discrete labels; else assumes continuous node embeddings
+        blur: smoothing parameter for Sinkhorn (smaller = closer to EMD)
+        p: power for cost (usually 2 for Euclidean squared)
+
+    Returns:
+        Distance matrix (n_graphs x n_graphs)
+    """
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    sinkhorn = SamplesLoss("sinkhorn", p=p, blur=blur)
+
+    n = len(label_sequences)
+    M = torch.zeros((n, n), device=device)
+
+    for i, emb_i in enumerate(label_sequences):
+        x_i = torch.tensor(emb_i, dtype=torch.float32, device=device)
+
+        for j in range(i, n):
+            x_j = torch.tensor(label_sequences[j], dtype=torch.float32, device=device)
+
+            # Uniform weights
+            a = torch.ones(x_i.shape[0], device=device) / x_i.shape[0]
+            b = torch.ones(x_j.shape[0], device=device) / x_j.shape[0]
+
+            dist = sinkhorn(a, x_i, b, x_j)
+            M[i, j] = dist
+            M[j, i] = dist  # symmetric
+
+    return M.cpu().numpy()
 
 def pairwise_wasserstein_distance(X, node_features = None, num_iterations=3, sinkhorn=False, enforce_continuous=False):
     """
@@ -96,8 +89,7 @@ def pairwise_wasserstein_distance(X, node_features = None, num_iterations=3, sin
 
     # Compute the Wasserstein distance
     print("Computing Wasserstein distance between conditions...")
-    pairwise_distances = _compute_wasserstein_distance(node_representations, sinkhorn=sinkhorn, 
-                                    categorical=categorical, sinkhorn_lambda=1e-2)
+    pairwise_distances = _compute_wasserstein_distance_geomloss(node_representations, categorical=categorical)
     return pairwise_distances
 
 def wwl(X, node_features=None, num_iterations=3, sinkhorn=False, gamma=None):
@@ -108,8 +100,3 @@ def wwl(X, node_features=None, num_iterations=3, sinkhorn=False, gamma=None):
                                 num_iterations=num_iterations, sinkhorn=sinkhorn)
     wwl = laplacian_kernel(D_W, gamma=gamma)
     return wwl
-
-
-#######################
-# Class implementation
-#######################
